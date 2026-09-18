@@ -19,9 +19,9 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser**
 
-### CTA Bus Tracker — proxied via allorigins.win
+### CTA Bus Tracker — proxied via Cloudflare Worker
 - API: `https://www.ctabustracker.com/bustime/api/v2/getpredictions`
-- No CORS on the API itself; requests go through `https://api.allorigins.win/raw?url=`
+- No CORS on the API itself — deploy `worker.js` to Cloudflare Workers (free tier) and set `cta_proxy_url` in config
 - Requires a free API key from ctabustracker.com
 - JSONP is NOT supported by the CTA API (tested)
 
@@ -31,23 +31,19 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 {
   "passio_system_id": 1068,
   "cta_api_key": "YOUR_KEY_HERE",
+  "cta_proxy_url": "https://your-worker.workers.dev",
   "tabs": [
     {
       "label": "Tab Name",
-      "entries": [
+      "stops": [
         {
-          "source": "passio",
-          "route_id": "ROUTE_ID",
-          "stop_id": "STOP_ID",
-          "route_label": "Route Name",
-          "stop_name": "Stop Name"
-        },
-        {
-          "source": "cta",
-          "route": "ROUTE_NUMBER",
-          "direction": "Northbound",
-          "stop_id": "STOP_ID",
-          "stop_label": "Stop Name"
+          "label": "Stop Name",
+          "lat": 41.7886,
+          "lon": -87.5987,
+          "feeds": [
+            { "source": "passio", "route_id": "ROUTE_ID", "stop_id": "STOP_ID", "route_label": "Route Name" },
+            { "source": "cta", "route": "ROUTE_NUMBER", "stop_id": "STOP_ID", "direction": "Northbound" }
+          ]
         }
       ]
     },
@@ -59,9 +55,18 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 }
 ```
 
+Optional fields:
+- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `allorigins.win` if omitted.
+- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
+- Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
+
 Tab types:
-- Default (omit `type`): list of `entries`, each a Passio or CTA stop
+- Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
 - `"type": "cta-spot"`: ad-hoc stop number lookup widget
+
+## Wishlist
+
+- **Intersection stop lookup** — enter a cross-street (e.g. "State and Monroe") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance.
 
 ## Deployment
 
