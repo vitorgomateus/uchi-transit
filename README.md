@@ -31,6 +31,7 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 {
   "passio_system_id": 1068,
   "cta_api_key": "YOUR_KEY_HERE",
+  "cta_proxy_url": "https://your-worker.workers.dev",
   "tabs": [
     {
       "label": "Tab Name",
@@ -40,14 +41,18 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
           "route_id": "ROUTE_ID",
           "stop_id": "STOP_ID",
           "route_label": "Route Name",
-          "stop_name": "Stop Name"
+          "stop_name": "Stop Name",
+          "stop_lat": 41.7886,
+          "stop_lon": -87.5987,
+          "group": "optional-shared-key"
         },
         {
           "source": "cta",
           "route": "ROUTE_NUMBER",
           "direction": "Northbound",
           "stop_id": "STOP_ID",
-          "stop_label": "Stop Name"
+          "stop_label": "Stop Name",
+          "group": "optional-shared-key"
         }
       ]
     },
@@ -58,6 +63,11 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
   ]
 }
 ```
+
+Optional fields:
+- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `allorigins.win` if omitted.
+- `stop_lat` / `stop_lon` — enables vehicle-position ETA for Passio entries. When present, a haversine estimate `[N]` appears beside arrivals ≤ 12 min, showing whether the vehicle is closer or further than the scheduled time suggests.
+- `group` — shared string key that collapses multiple entries (even across sources) into one stop card. Useful when a CTA and Passio stop are at the same physical location.
 
 Tab types:
 - Default (omit `type`): list of `entries`, each a Passio or CTA stop

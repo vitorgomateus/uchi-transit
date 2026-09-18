@@ -97,30 +97,50 @@
     #content { flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
 
     /* Cards */
-    .card { background: #1c1c1e; border-radius: 12px; padding: 14px 16px; }
-    .card-route { font-size: 15px; font-weight: 600; }
-    .card-stop  { font-size: 13px; color: #8e8e93; margin-top: 2px; }
-
-    /* Stop-grouped rows */
-    .stop-entries { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
-    .stop-row     { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
-
-    .dir-tag {
-      display: inline-flex; align-items: center;
-      background: #2c2c2e; border-radius: 6px;
-      padding: 2px 8px; font-size: 11px; font-weight: 500;
-      color: #ebebf5; text-transform: uppercase; letter-spacing: 0.3px;
-      white-space: nowrap; flex-shrink: 0;
+    .stop-card {
+      background: #1c1c1e; border-radius: 12px; padding: 14px 16px;
     }
 
-    .arrivals { display: flex; flex-wrap: wrap; gap: 8px; }
+    /* Collapsed: all routes at this stop have no service */
+    .stop-card.no-service {
+      padding: 11px 16px;
+      display: flex; align-items: baseline; gap: 10px;
+    }
+    .stop-card.no-service .route-rows { display: none; }
+    .no-svc-label {
+      display: none; font-size: 13px; color: #636366;
+    }
+    .stop-card.no-service .no-svc-label { display: inline; }
+
+    .stop-name {
+      font-size: 17px; font-weight: 700; margin-bottom: 10px;
+    }
+    .stop-card.no-service .stop-name { margin-bottom: 0; }
+
+    /* Route rows */
+    .route-rows { display: flex; flex-direction: column; gap: 10px; }
+    .route-row  { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
+    .route-lbl {
+      font-size: 13px; font-weight: 500; color: #8e8e93;
+      white-space: nowrap;
+    }
+    .dir-lbl {
+      font-size: 11px; color: #48484a;
+      text-transform: uppercase; letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+
+    .arrivals { display: flex; flex-wrap: wrap; gap: 6px; }
 
     .chip {
       background: #2c2c2e; border-radius: 8px;
-      padding: 7px 12px; font-size: 15px; font-weight: 700; color: #fff;
+      padding: 6px 11px; font-size: 17px; font-weight: 700; color: #fff;
+      display: inline-flex; align-items: baseline; gap: 4px;
     }
     .chip.due  { background: rgba(255,214,10,0.15); color: #ffd60a; }
     .chip.soon { color: #30d158; }
+    .eta { font-size: 11px; font-weight: 400; color: #48484a; }
 
     .card-status { font-size: 14px; color: #636366; }
     .card-err    { font-size: 13px; color: #ff453a; }
@@ -353,39 +373,32 @@ function renderContent() {
 
   el.innerHTML = '';
 
-  // Group entries by source+stop_id so same physical stop collapses into one card
+  // Group entries: same physical stop via entry.group, else source+stop_id
   const groups = new Map();
   tab.entries.forEach((entry, idx) => {
-    const key = `${entry.source}-${entry.stop_id}`;
+    const key = entry.group ?? `${entry.source}-${entry.stop_id}`;
     if (!groups.has(key)) {
-      const stopName = entry.label || `Stop ${entry.stop_id}`;
-      groups.set(key, { stopName, entries: [] });
+      const stopName = entry.stop_name || entry.stop_label || `Stop ${entry.stop_id}`;
+      groups.set(key, { key, stopName, entries: [] });
     }
     groups.get(key).entries.push({ entry, idx });
   });
 
   for (const group of groups.values()) {
     const card = document.createElement('div');
-    card.className = 'card';
+    card.className = 'stop-card';
+    card.dataset.gid = group.key;
 
-    const routeLabels = [...new Set(group.entries.map(({ entry: e }) =>
-      e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`
-    ))];
-    const sharedRoute = routeLabels.length === 1 ? routeLabels[0] : '';
-
-    let html = '';
-    if (sharedRoute) html += `<div class="card-route">${sharedRoute}</div>`;
-    html += `<div class="card-stop">${group.stopName}</div>`;
-    html += '<div class="stop-entries">';
+    let html = `<div class="stop-name">${group.stopName}</div>`;
+    html += '<span class="no-svc-label">No service scheduled</span>';
+    html += '<div class="route-rows">';
 
     for (const { entry: e, idx } of group.entries) {
-      const perRowRoute = !sharedRoute
-        ? (e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`)
-        : '';
-      html += '<div class="stop-row">';
-      if (perRowRoute) html += `<span class="card-route" style="width:100%;margin-bottom:2px">${perRowRoute}</span>`;
-      if (e.direction) html += `<span class="dir-tag">${e.direction}</span>`;
-      html += `<div class="arrivals" id="row-${idx}"><span class="card-status">Loading…</span></div>`;
+      const routeLbl = e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`;
+      html += '<div class="route-row">';
+      if (routeLbl)  html += `<span class="route-lbl">${routeLbl}</span>`;
+      if (e.direction) html += `<span class="dir-lbl">${e.direction}</span>`;
+      html += `<div class="arrivals" id="row-${idx}" data-idx="${idx}"><span class="card-status">…</span></div>`;
       html += '</div>';
     }
 
@@ -403,26 +416,46 @@ function renderContent() {
 }
 
 // ── Row updaters ──────────────────────────────────────────────────────────────
-function setRowArrivals(i, mins) {
+// arrivals: [{m, approx}] — approx is position-based estimate or null
+function setRowArrivals(i, arrivals) {
   const el = document.getElementById(`row-${i}`);
   if (!el) return;
+  el.dataset.resolved = '1';
+  el.dataset.hasService = arrivals.length ? '1' : '0';
 
-  if (!mins.length) {
-    el.innerHTML = '<span class="card-status">No service</span>';
+  if (!arrivals.length) {
+    el.innerHTML = '';
+    maybeCollapseGroup(el);
     return;
   }
 
-  el.innerHTML = mins.map(m => {
+  el.innerHTML = arrivals.map(({ m, approx }) => {
     if (m <= 0) return '<span class="chip due">Due</span>';
-    if (m <= 5) return `<span class="chip soon">${m} min</span>`;
-    return `<span class="chip">${m} min</span>`;
+    const cls = m <= 5 ? 'chip soon' : 'chip';
+    const etaHtml = approx != null ? `<span class="eta">[${approx}]</span>` : '';
+    return `<span class="${cls}">${m}${etaHtml}</span>`;
   }).join('');
+
+  maybeCollapseGroup(el);
+}
+
+function maybeCollapseGroup(rowEl) {
+  const card = rowEl.closest('.stop-card');
+  if (!card) return;
+  const rows = card.querySelectorAll('.arrivals[data-idx]');
+  const allResolved = [...rows].every(r => r.dataset.resolved === '1');
+  if (!allResolved) return;
+  const allEmpty = [...rows].every(r => r.dataset.hasService === '0');
+  card.classList.toggle('no-service', allEmpty);
 }
 
 function setRowErr(i, msg) {
   const el = document.getElementById(`row-${i}`);
   if (!el) return;
+  el.dataset.resolved = '1';
+  el.dataset.hasService = '1'; // error = don't collapse
   el.innerHTML = `<span class="card-err">${msg}</span>`;
+  maybeCollapseGroup(el);
 }
 
 // ── Passio GTFS-RT ────────────────────────────────────────────────────────────
@@ -432,17 +465,24 @@ async function fetchPassioFeed() {
   return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
 }
 
+async function fetchPassioVehicles() {
+  const res = await fetch('https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions');
+  if (!res.ok) throw new Error('Vehicles HTTP ' + res.status);
+  return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
+}
+
 function longToSecs(val) {
   if (!val) return null;
   if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
   return Number(val);
 }
 
+// Returns [{m, tripId}] sorted ascending, capped at max
 function getPassioArrivals(feed, routeId, stopId, max = 3) {
-  const now  = Math.floor(Date.now() / 1000);
-  const mins = [];
-  const rid  = String(routeId);
-  const sid  = String(stopId);
+  const now     = Math.floor(Date.now() / 1000);
+  const results = [];
+  const rid     = String(routeId);
+  const sid     = String(stopId);
 
   for (const ent of (feed.entity || [])) {
     if (!ent.tripUpdate) continue;
@@ -452,11 +492,48 @@ function getPassioArrivals(feed, routeId, stopId, max = 3) {
     for (const stu of (ent.tripUpdate.stopTimeUpdate || [])) {
       if (stu.stopId !== sid) continue;
       const t = longToSecs(stu.arrival?.time) ?? longToSecs(stu.departure?.time);
-      if (t && t > now - 60) mins.push(Math.round((t - now) / 60));
+      if (t && t > now - 60) {
+        results.push({ m: Math.round((t - now) / 60), tripId: ent.tripUpdate.trip?.tripId || ent.id });
+      }
     }
   }
 
-  return mins.sort((a, b) => a - b).slice(0, max);
+  return results.sort((a, b) => a.m - b.m).slice(0, max);
+}
+
+// ── Vehicle-position ETA ──────────────────────────────────────────────────────
+// Enabled per entry when stop_lat + stop_lon are in config.
+// Haversine ÷ 18.5 km/h effective speed (15 mph avg, ×1.3 road factor).
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    = Math.sin(dLat/2)**2
+    + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getVehiclePos(vehiclesFeed, tripId) {
+  if (!vehiclesFeed || !tripId) return null;
+  for (const ent of (vehiclesFeed.entity || [])) {
+    const vp = ent.vehicle;
+    if (vp?.trip?.tripId === tripId && vp.position) {
+      return { lat: vp.position.latitude, lon: vp.position.longitude };
+    }
+  }
+  return null;
+}
+
+// Returns [{m, approx}] — approx is null when no position data available
+function addApproxEtas(arrivals, vehiclesFeed, entry) {
+  const hasCoords = entry.stop_lat != null && entry.stop_lon != null;
+  return arrivals.map(a => {
+    if (!hasCoords || a.m > 12) return { m: a.m, approx: null };
+    const pos = getVehiclePos(vehiclesFeed, a.tripId);
+    if (!pos) return { m: a.m, approx: null };
+    const km = haversineKm(pos.lat, pos.lon, entry.stop_lat, entry.stop_lon);
+    return { m: a.m, approx: Math.round(km / 18.5 * 60) };
+  });
 }
 
 // ── Debug block ───────────────────────────────────────────────────────────────
@@ -497,9 +574,11 @@ function updateDebug(tab, passioFeed) {
   }, null, 2);
 }
 
-// ── CTA via allorigins.win proxy ──────────────────────────────────────────────
-const CTA_BASE  = 'https://www.ctabustracker.com/bustime/api/v2/getpredictions';
-const ctaProxy  = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw') + '?url=';
+// ── CTA via CORS proxy ────────────────────────────────────────────────────────
+const CTA_BASE   = 'https://www.ctabustracker.com/bustime/api/v2/getpredictions';
+const ctaProxy   = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw') + '?url=';
+// API messages meaning "no vehicles right now" — collapse the card, not a red error
+const CTA_NO_SVC = new Set(['No service scheduled', 'No arrival times', 'No actual times']);
 
 async function fetchCTA(stopId, route) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
@@ -516,7 +595,11 @@ async function fetchCTA(stopId, route) {
   const btr   = data?.['bustime-response'];
   const preds = btr?.prd || [];
   const errs  = btr?.error;
-  if (!preds.length && errs?.length) throw new Error(errs[0]?.msg || 'CTA error');
+  if (!preds.length && errs?.length) {
+    const msg = errs[0]?.msg || 'CTA error';
+    if (CTA_NO_SVC.has(msg)) return [];
+    throw new Error(msg);
+  }
 
   return preds
     .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
@@ -553,21 +636,28 @@ async function doRefresh() {
   if (tab.type === 'cta-spot') { scheduleNext(); return; }
   if (!tab.entries?.length)    { scheduleNext(); return; }
 
-  const hasPassio = tab.entries.some(e => e.source === 'passio');
-  let passioFeed = null, passioErr = null;
+  const hasPassio     = tab.entries.some(e => e.source === 'passio');
+  const needsVehicles = hasPassio && tab.entries.some(e => e.stop_lat != null);
+  let passioFeed = null, passioErr = null, vehiclesFeed = null;
 
   if (hasPassio) {
-    try { passioFeed = await fetchPassioFeed(); lastPassio = passioFeed; }
-    catch (e) { passioErr = e.message; }
+    const [pf, vf] = await Promise.all([
+      fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
+      needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
+    ]);
+    passioFeed = pf; vehiclesFeed = vf; lastPassio = pf;
   }
 
   await Promise.all(tab.entries.map(async (entry, i) => {
     try {
       if (entry.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
-        setRowArrivals(i, getPassioArrivals(passioFeed, entry.route_id, entry.stop_id));
+        const raw = getPassioArrivals(passioFeed, entry.route_id, entry.stop_id);
+        setRowArrivals(i, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, entry)
+                                       : raw.map(a => ({ m: a.m, approx: null })));
       } else if (entry.source === 'cta') {
-        setRowArrivals(i, await fetchCTA(entry.stop_id, entry.route));
+        const mins = await fetchCTA(entry.stop_id, entry.route);
+        setRowArrivals(i, mins.map(m => ({ m, approx: null })));
       }
     } catch (e) {
       setRowErr(i, e.message);
@@ -614,8 +704,8 @@ async function doSpot() {
     res.innerHTML = Object.values(byRoute).map(r => {
       const chips = r.mins.slice(0, 3).map(m => {
         if (m <= 0) return '<span class="chip due">Due</span>';
-        if (m <= 5) return `<span class="chip soon">${m} min</span>`;
-        return `<span class="chip">${m} min</span>`;
+        if (m <= 5) return `<span class="chip soon">${m}</span>`;
+        return `<span class="chip">${m}</span>`;
       }).join('');
       return `<div class="card">
         <div class="card-route">Route ${r.rt} — ${r.des}</div>
