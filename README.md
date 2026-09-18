@@ -19,9 +19,9 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser**
 
-### CTA Bus Tracker — proxied via allorigins.win
+### CTA Bus Tracker — proxied via Cloudflare Worker
 - API: `https://www.ctabustracker.com/bustime/api/v2/getpredictions`
-- No CORS on the API itself; requests go through `https://api.allorigins.win/raw?url=`
+- No CORS on the API itself — deploy `worker.js` to Cloudflare Workers (free tier) and set `cta_proxy_url` in config
 - Requires a free API key from ctabustracker.com
 - JSONP is NOT supported by the CTA API (tested)
 

@@ -144,6 +144,7 @@
 
     .card-status { font-size: 14px; color: #636366; }
     .card-err    { font-size: 13px; color: #ff453a; }
+    .no-arr      { font-size: 13px; color: #3a3a3c; }
 
     /* Debug block */
     details.debug-block { margin-top: 4px; }
@@ -424,7 +425,7 @@ function setRowArrivals(i, arrivals) {
   el.dataset.hasService = arrivals.length ? '1' : '0';
 
   if (!arrivals.length) {
-    el.innerHTML = '';
+    el.innerHTML = '<span class="no-arr">—</span>';
     maybeCollapseGroup(el);
     return;
   }
