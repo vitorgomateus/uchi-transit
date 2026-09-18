@@ -416,9 +416,11 @@ function getPassioArrivals(feed, routeId, stopId, max = 3) {
   return mins.sort((a, b) => a - b).slice(0, max);
 }
 
-// ── CTA via allorigins.win proxy ──────────────────────────────────────────────
-const CTA_BASE  = 'https://www.ctabustracker.com/bustime/api/v2/getpredictions';
-const CTA_PROXY = 'https://api.allorigins.win/raw?url=';
+// ── CTA via CORS proxy ────────────────────────────────────────────────────────
+// Override the proxy by setting cta_proxy_url in your config.json.
+// Deploy worker.js to Cloudflare Workers and paste the worker URL there.
+const CTA_BASE = 'https://www.ctabustracker.com/bustime/api/v2/getpredictions';
+const ctaProxy = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw') + '?url=';
 
 async function fetchCTA(stopId, route) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
@@ -433,7 +435,7 @@ async function fetchCTA(stopId, route) {
   if (route) params.set('rt', String(route));
 
   const target = `${CTA_BASE}?${params}`;
-  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  const res    = await fetch(ctaProxy() + encodeURIComponent(target));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
   const data  = await res.json();
@@ -463,7 +465,7 @@ async function fetchCTARaw(stopId) {
   });
 
   const target = `${CTA_BASE}?${params}`;
-  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  const res    = await fetch(ctaProxy() + encodeURIComponent(target));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
   const data  = await res.json();
