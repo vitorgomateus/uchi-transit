@@ -201,11 +201,11 @@
 <div id="app">
   <header id="hdr">
     <div id="hdr-top">
-      <span id="hdr-title">Transit</span>
+      <h1 id="hdr-title">Transit</h1>
       <div id="hdr-right">
-        <span id="refresh-cd"></span>
-        <button id="refresh-btn" onclick="doRefresh()" aria-label="Refresh now">↻ Refresh</button>
-        <button id="cfg-link" onclick="showCfgScreen()">Config</button>
+        <span id="refresh-cd" aria-hidden="true"></span>
+        <button id="refresh-btn" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">↻ Refresh</button>
+        <button id="cfg-link" onclick="showCfgScreen()" aria-label="Open configuration" title="Open configuration">Config</button>
       </div>
     </div>
     <nav id="tabs" aria-label="Transit tabs"></nav>
@@ -328,6 +328,7 @@ function buildTabs() {
     b.className = 'tab';
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', 'false');
+    b.setAttribute('aria-controls', 'content');
     b.textContent = t.label;
     b.onclick = () => switchTab(i);
     bar.appendChild(b);
@@ -388,11 +389,12 @@ function renderContent() {
     html += '<div class="route-rows">';
 
     for (const feed of (stop.feeds || [])) {
-      const routeLbl = feed.source === 'passio' ? (feed.route_label || '') : `Route ${feed.route}`;
+      const routeLbl = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
+      const rowDesc  = routeLbl + (feed.direction ? ', ' + feed.direction : '');
       html += '<div class="route-row">';
-      if (routeLbl)     html += `<span class="route-lbl">${routeLbl}</span>`;
+      if (routeLbl)       html += `<span class="route-lbl">${routeLbl}</span>`;
       if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
-      html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}"><span class="card-status">…</span></div>`;
+      html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}" data-lbl="${rowDesc}" aria-live="polite" aria-label="${rowDesc}: loading"><span class="card-status" aria-hidden="true">…</span></div>`;
       html += '</div>';
       feedIdx++;
     }
@@ -418,17 +420,23 @@ function setRowArrivals(i, arrivals) {
   el.dataset.resolved = '1';
   el.dataset.hasService = arrivals.length ? '1' : '0';
 
+  const prefix = el.dataset.lbl ? el.dataset.lbl + ': ' : '';
+
   if (!arrivals.length) {
-    el.innerHTML = '<span class="no-arr">—</span>';
+    el.setAttribute('aria-label', prefix + 'no service');
+    el.innerHTML = '<span class="no-arr" aria-hidden="true">—</span>';
     maybeCollapseGroup(el);
     return;
   }
 
+  const summary = arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
+  el.setAttribute('aria-label', prefix + summary);
+
   el.innerHTML = arrivals.map(({ m, approx }) => {
-    if (m <= 0) return '<span class="chip due">Due</span>';
+    if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
     const cls = m <= 5 ? 'chip soon' : 'chip';
-    const etaHtml = approx != null ? `<span class="eta">[${approx}]</span>` : '';
-    return `<span class="${cls}">${m}${etaHtml}</span>`;
+    const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
+    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
   }).join('');
 
   maybeCollapseGroup(el);
@@ -449,6 +457,8 @@ function setRowErr(i, msg) {
   if (!el) return;
   el.dataset.resolved = '1';
   el.dataset.hasService = '1'; // error = don't collapse
+  const prefix = el.dataset.lbl ? el.dataset.lbl + ': ' : '';
+  el.setAttribute('aria-label', prefix + 'error — ' + msg);
   el.innerHTML = `<span class="card-err">${msg}</span>`;
   maybeCollapseGroup(el);
 }
