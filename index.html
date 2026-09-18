@@ -182,6 +182,20 @@
     #spot-go:active { opacity: 0.8; }
 
     #spot-results { display: flex; flex-direction: column; gap: 10px; }
+
+    #spot-saved { display: flex; flex-wrap: wrap; gap: 8px; }
+    .spot-fav-wrap { display: inline-flex; align-items: center; background: #2c2c2e; border-radius: 20px; overflow: hidden; }
+    .spot-fav { background: none; border: none; color: #fff; cursor: pointer; font-size: 13px; padding: 6px 12px; }
+    .spot-fav:active { opacity: 0.7; }
+    .spot-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
+    .spot-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
+
+    #debug-sections > details { margin-top: 4px; }
+    #debug-sections > details > summary {
+      font-size: 11px; color: #48484a; cursor: pointer; padding: 4px 0;
+      user-select: none; list-style: none;
+    }
+    #debug-sections > details > summary::-webkit-details-marker { display: none; }
   </style>
 </head>
 <body>
@@ -315,6 +329,7 @@ function showCfgScreen() {
 function startApp() {
   document.getElementById('cfg').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
+  syncSpotFavorites();
   buildTabs();
   switchTab(0);
 }
@@ -365,8 +380,10 @@ function renderContent() {
             onkeydown="if(event.key==='Enter')doSpot()">
           <button id="spot-go" onclick="doSpot()">Go</button>
         </div>
+        <div id="spot-saved" aria-label="Saved stops"></div>
         <div id="spot-results" aria-live="polite"></div>
       </div>`;
+    renderSavedSpots();
     return;
   }
 
@@ -408,7 +425,7 @@ function renderContent() {
   const dbk = document.createElement('details');
   dbk.className = 'debug-block';
   dbk.id = 'debug-block';
-  dbk.innerHTML = '<summary>Raw feed data</summary><pre id="debug-pre">(waiting for refresh)</pre>';
+  dbk.innerHTML = '<summary>Debug</summary><div id="debug-sections"><p style="font-size:11px;color:#48484a;padding:4px 0">(waiting for refresh)</p></div>';
   el.appendChild(dbk);
 }
 
@@ -542,34 +559,33 @@ function addApproxEtas(arrivals, vehiclesFeed, stop) {
 }
 
 // ── Debug block ───────────────────────────────────────────────────────────────
-function updateDebug(tab, passioFeed) {
-  const pre = document.getElementById('debug-pre');
-  if (!pre) return;
+function appendDebug(label, data) {
+  const sec = document.getElementById('debug-sections');
+  if (!sec) return;
+  if (sec.querySelector('p')) sec.innerHTML = ''; // clear placeholder
+  const isErr = data instanceof Error;
+  const count = Array.isArray(data) ? ` — ${data.length}` : isErr ? ' — error' : '';
+  const d = document.createElement('details');
+  d.innerHTML = `<summary>${label}${count}</summary><pre>${JSON.stringify(isErr ? { error: data.message } : data, null, 2)}</pre>`;
+  sec.appendChild(d);
+}
 
-  const now = Math.floor(Date.now() / 1000);
+function buildPassioDebug(feed, tab) {
+  if (!feed) return null;
+  const now      = Math.floor(Date.now() / 1000);
   const allFeeds = (tab.stops || []).flatMap(s => s.feeds || []);
-
-  if (!passioFeed || !allFeeds.some(f => f.source === 'passio')) {
-    pre.textContent = '(no Passio data for this tab)';
-    return;
-  }
-
-  const routeIds = new Set(
-    allFeeds.filter(f => f.source === 'passio').map(f => String(f.route_id))
-  );
-  const entities = (passioFeed.entity || []).filter(ent => {
+  const routeIds = new Set(allFeeds.filter(f => f.source === 'passio').map(f => String(f.route_id)));
+  const entities = (feed.entity || []).filter(ent => {
     const rid = ent.tripUpdate?.trip?.routeId;
     return !rid || routeIds.has(rid);
   });
-
-  pre.textContent = JSON.stringify({
-    feed_ts:        longToSecs(passioFeed.header?.timestamp),
-    fetched_at:     new Date().toISOString(),
-    matching_trips: entities.length,
+  return {
+    feed_timestamp:  longToSecs(feed.header?.timestamp),
+    fetched_at:      new Date().toISOString(),
+    matching_trips:  entities.length,
     trips: entities.map(ent => ({
-      entity_id: ent.id,
-      trip_id:   ent.tripUpdate?.trip?.tripId,
-      route_id:  ent.tripUpdate?.trip?.routeId,
+      trip_id:  ent.tripUpdate?.trip?.tripId,
+      route_id: ent.tripUpdate?.trip?.routeId,
       stops: (ent.tripUpdate?.stopTimeUpdate || []).map(stu => ({
         stop_id:  stu.stopId,
         stop_seq: stu.stopSequence,
@@ -577,7 +593,71 @@ function updateDebug(tab, passioFeed) {
         dep_min:  stu.departure?.time ? Math.round((longToSecs(stu.departure.time) - now) / 60) : null,
       }))
     }))
-  }, null, 2);
+  };
+}
+
+function buildVehicleDebug(feed) {
+  if (!feed) return null;
+  return {
+    fetched_at:    new Date().toISOString(),
+    vehicle_count: (feed.entity || []).length,
+    vehicles: (feed.entity || []).map(ent => ({
+      trip_id: ent.vehicle?.trip?.tripId,
+      lat:     ent.vehicle?.position?.latitude,
+      lon:     ent.vehicle?.position?.longitude,
+      bearing: ent.vehicle?.position?.bearing,
+    })).filter(v => v.lat != null),
+  };
+}
+
+// ── CTA Spot saved stops ──────────────────────────────────────────────────────
+function getSavedSpots() {
+  try { return JSON.parse(localStorage.getItem('transit_spots') || '[]'); }
+  catch { return []; }
+}
+
+function syncSpotFavorites() {
+  const tab  = cfg?.tabs?.find(t => t.type === 'cta-spot');
+  const favs = tab?.spot_favorites;
+  if (!favs?.length) return;
+  const existing   = getSavedSpots();
+  const existingIds = new Set(existing.map(s => s.id));
+  const merged = [
+    ...favs.filter(s => s.id && !existingIds.has(s.id)),
+    ...existing,
+  ].slice(0, 6);
+  localStorage.setItem('transit_spots', JSON.stringify(merged));
+}
+
+function saveSpot(id, label) {
+  const spots = getSavedSpots().filter(s => s.id !== id);
+  spots.unshift({ id, label });
+  localStorage.setItem('transit_spots', JSON.stringify(spots.slice(0, 6)));
+  renderSavedSpots();
+  document.querySelector('.spot-save-btn')?.remove();
+}
+
+function removeSpot(id) {
+  const spots = getSavedSpots().filter(s => s.id !== id);
+  localStorage.setItem('transit_spots', JSON.stringify(spots));
+  renderSavedSpots();
+}
+
+function renderSavedSpots() {
+  const wrap = document.getElementById('spot-saved');
+  if (!wrap) return;
+  const spots = getSavedSpots();
+  wrap.innerHTML = spots.map(s =>
+    `<span class="spot-fav-wrap">` +
+    `<button class="spot-fav" onclick="loadSpot(${JSON.stringify(s.id)})">${s.label}</button>` +
+    `<button class="spot-fav-rm" onclick="removeSpot(${JSON.stringify(s.id)})" aria-label="Remove ${s.label}">×</button>` +
+    `</span>`
+  ).join('');
+}
+
+function loadSpot(id) {
+  const inp = document.getElementById('spot-inp');
+  if (inp) { inp.value = id; doSpot(); }
 }
 
 // ── CTA via CORS proxy ────────────────────────────────────────────────────────
@@ -668,12 +748,19 @@ async function doRefresh() {
 
   const promises = [];
 
+  const dbSec = document.getElementById('debug-sections');
+  if (dbSec) dbSec.innerHTML = '<p style="font-size:11px;color:#48484a;padding:4px 0">Refreshing…</p>';
+
   if (hasPassio) {
     promises.push(
       Promise.all([
         fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
         needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
-      ]).then(([pf, vf]) => { passioFeed = pf; vehiclesFeed = vf; lastPassio = pf; })
+      ]).then(([pf, vf]) => {
+        passioFeed = pf; vehiclesFeed = vf; lastPassio = pf;
+        appendDebug('Passio TripUpdates', passioErr ? new Error(passioErr) : buildPassioDebug(pf, tab));
+        if (needsVehicles) appendDebug('Passio VehiclePositions', buildVehicleDebug(vf));
+      })
     );
   }
 
@@ -681,8 +768,8 @@ async function doRefresh() {
     const routes = items.map(i => i.feed.route);
     promises.push(
       fetchCTABatch(stopId, routes)
-        .then(preds => ctaResults.set(stopId, preds))
-        .catch(e    => ctaResults.set(stopId, e))
+        .then(preds => { ctaResults.set(stopId, preds); appendDebug(`CTA stop ${stopId} (${routes.join(', ')})`, preds); })
+        .catch(e    => { ctaResults.set(stopId, e);     appendDebug(`CTA stop ${stopId} (${routes.join(', ')})`, e); })
     );
   }
 
@@ -712,7 +799,6 @@ async function doRefresh() {
     }
   }
 
-  updateDebug(tab, passioFeed);
   scheduleNext();
 }
 
@@ -751,6 +837,14 @@ async function doSpot() {
       return;
     }
 
+    const stopName = preds[0]?.stpnm || `Stop ${inp}`;
+    const saved    = getSavedSpots();
+    const isSaved  = saved.some(s => s.id === inp);
+    const atCap    = saved.length >= 6;
+    const saveHtml = isSaved  ? ''
+      : atCap ? '<p class="card-status" style="font-size:13px;padding:0 0 8px">Favorites full (6) — remove one to add more.</p>'
+      : `<button class="spot-save-btn" onclick="saveSpot(${JSON.stringify(inp)}, ${JSON.stringify(stopName)})">☆ Save "${stopName}"</button>`;
+
     const byRoute = {};
     for (const p of preds) {
       if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, mins: [] };
@@ -758,16 +852,18 @@ async function doSpot() {
       if (!isNaN(m)) byRoute[p.rt].mins.push(m);
     }
 
-    res.innerHTML = Object.values(byRoute).map(r => {
+    res.innerHTML = saveHtml + Object.values(byRoute).map(r => {
       const chips = r.mins.slice(0, 3).map(m => {
-        if (m <= 0) return '<span class="chip due">Due</span>';
-        if (m <= 5) return `<span class="chip soon">${m}</span>`;
-        return `<span class="chip">${m}</span>`;
+        if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
+        if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}</span>`;
+        return `<span class="chip" aria-hidden="true">${m}</span>`;
       }).join('');
-      return `<div class="card">
-        <div class="card-route">Route ${r.rt} — ${r.des}</div>
-        <div class="card-stop">${r.dir}</div>
-        <div class="arrivals">${chips}</div>
+      return `<div class="stop-card">
+        <div class="stop-name">Route ${r.rt} — ${r.des}</div>
+        <div class="route-rows"><div class="route-row">
+          <span class="dir-lbl">${r.dir}</span>
+          <div class="arrivals">${chips}</div>
+        </div></div>
       </div>`;
     }).join('');
   } catch (e) {

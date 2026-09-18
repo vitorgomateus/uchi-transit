@@ -59,6 +59,18 @@ Optional fields:
 - `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `allorigins.win` if omitted.
 - `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
+- `spot_favorites` on the `cta-spot` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
+
+```json
+{
+  "label": "CTA Spot",
+  "type": "cta-spot",
+  "spot_favorites": [
+    { "id": "2376", "label": "State & Roosevelt" },
+    { "id": "14760", "label": "Michigan & 16th NB" }
+  ]
+}
+```
 
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
@@ -66,7 +78,12 @@ Tab types:
 
 ## Wishlist
 
-- **Intersection stop lookup** — enter a cross-street (e.g. "State and Monroe") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance.
+- **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance.
+- **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
+- **Stale data indicator** — show a "updated N min ago" badge when the last refresh errored, so you know displayed times might be old.
+- **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
+- **PWA / offline** — service worker caches the last good arrival data so the app shows something useful instead of errors when offline.
+- **CTA Train Tracker** — L train ETAs via the CTA Train Tracker API (same proxy, different endpoint); same stop/feed schema would accommodate it cleanly.
 
 ## Deployment
 
