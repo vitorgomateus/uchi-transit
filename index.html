@@ -1,0 +1,590 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta name="theme-color" content="#000000">
+  <title>Transit</title>
+  <script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #000;
+      color: #fff;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
+      font-size: 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── Config screen ───────────────────────────────────── */
+    #cfg {
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      gap: 16px;
+    }
+
+    #cfg h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
+
+    #cfg p {
+      color: #8e8e93; font-size: 15px; text-align: center;
+      line-height: 1.5; max-width: 360px;
+    }
+
+    #cfg-ta {
+      width: 100%; max-width: 480px; height: 200px;
+      background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 12px;
+      color: #fff; font-family: 'Menlo', 'Monaco', monospace; font-size: 12px;
+      padding: 12px; resize: vertical; line-height: 1.4;
+    }
+    #cfg-ta:focus { outline: none; border-color: #0a84ff; }
+
+    #cfg-err { color: #ff453a; font-size: 13px; display: none; max-width: 480px; }
+
+    .primary-btn {
+      background: #0a84ff; color: #fff; border: none; border-radius: 12px;
+      padding: 14px 0; font-size: 17px; font-weight: 600; cursor: pointer;
+      width: 100%; max-width: 480px;
+    }
+    .primary-btn:active { opacity: 0.8; }
+
+    /* ── App ─────────────────────────────────────────────── */
+    #app { display: none; flex-direction: column; min-height: 100dvh; }
+
+    /* Header */
+    #hdr {
+      position: sticky; top: 0; z-index: 10;
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-bottom: 0.5px solid #3a3a3c;
+      padding: 12px 16px 0;
+    }
+
+    #hdr-top {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    #hdr-title { font-size: 20px; font-weight: 700; }
+
+    #hdr-right { display: flex; align-items: center; gap: 10px; }
+
+    #refresh-cd { font-size: 13px; color: #636366; min-width: 28px; text-align: right; }
+
+    #refresh-btn {
+      background: none; border: none; color: #0a84ff; cursor: pointer;
+      font-size: 15px; font-weight: 500; padding: 4px 6px;
+    }
+
+    #cfg-link {
+      background: none; border: none; color: #636366; cursor: pointer;
+      font-size: 13px; padding: 4px 0;
+    }
+
+    /* Tabs */
+    #tabs {
+      display: flex; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
+    }
+    #tabs::-webkit-scrollbar { display: none; }
+
+    .tab {
+      background: none; border: none;
+      border-bottom: 2px solid transparent;
+      color: #8e8e93; cursor: pointer;
+      font-size: 14px; font-weight: 500;
+      padding: 8px 14px; white-space: nowrap;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab.on { color: #fff; border-bottom-color: #0a84ff; }
+
+    /* Content */
+    #content {
+      flex: 1; padding: 12px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+    }
+
+    /* Entry cards */
+    .card {
+      background: #1c1c1e; border-radius: 12px; padding: 14px 16px;
+    }
+
+    .card-route { font-size: 15px; font-weight: 600; }
+    .card-stop  { font-size: 13px; color: #8e8e93; margin-top: 2px; }
+
+    .dir-tag {
+      display: inline-block; margin-top: 5px;
+      background: #2c2c2e; border-radius: 6px;
+      padding: 2px 8px; font-size: 11px; font-weight: 500;
+      color: #ebebf5; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .arrivals {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
+    }
+
+    .chip {
+      background: #2c2c2e; border-radius: 8px;
+      padding: 7px 12px; font-size: 15px; font-weight: 700; color: #fff;
+    }
+    .chip.due  { background: rgba(255,214,10,0.15); color: #ffd60a; }
+    .chip.soon { color: #30d158; }
+
+    .card-status { font-size: 14px; color: #636366; margin-top: 10px; }
+    .card-err    { font-size: 13px; color: #ff453a; margin-top: 10px; }
+
+    /* CTA Spot */
+    #spot-wrap { display: flex; flex-direction: column; gap: 12px; }
+
+    #spot-row { display: flex; gap: 8px; }
+
+    #spot-inp {
+      flex: 1; background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 10px;
+      color: #fff; font-size: 17px; padding: 10px 14px;
+    }
+    #spot-inp:focus { outline: none; border-color: #0a84ff; }
+
+    #spot-go {
+      background: #0a84ff; border: none; border-radius: 10px;
+      color: #fff; cursor: pointer; font-size: 17px; font-weight: 600;
+      padding: 10px 18px;
+    }
+    #spot-go:active { opacity: 0.8; }
+
+    #spot-results { display: flex; flex-direction: column; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<!-- Config screen -->
+<div id="cfg">
+  <h1>Transit</h1>
+  <p>Paste your config JSON to get started. It stays in this browser only — nothing leaves this device.</p>
+  <textarea id="cfg-ta" spellcheck="false"
+    placeholder='{ "passio_system_id": 1068, "cta_api_key": "...", "tabs": [...] }'></textarea>
+  <div id="cfg-err"></div>
+  <button class="primary-btn" onclick="applyConfig()">Load config</button>
+</div>
+
+<!-- App -->
+<div id="app">
+  <div id="hdr">
+    <div id="hdr-top">
+      <span id="hdr-title">Transit</span>
+      <div id="hdr-right">
+        <span id="refresh-cd"></span>
+        <button id="refresh-btn" onclick="doRefresh()">↻ Refresh</button>
+        <button id="cfg-link" onclick="showCfgScreen()">Config</button>
+      </div>
+    </div>
+    <div id="tabs"></div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<script>
+// ── Protobuf: minimal GTFS-RT descriptor ─────────────────────────────────────
+const FeedMessage = protobuf.Root.fromJSON({
+  nested: {
+    transit_realtime: {
+      nested: {
+        FeedMessage: { fields: {
+          header: { id:1, type:'FeedHeader', rule:'required' },
+          entity: { id:2, type:'FeedEntity',  rule:'repeated' }
+        }},
+        FeedHeader: { fields: {
+          gtfsRealtimeVersion: { id:1, type:'string', rule:'required' },
+          timestamp:           { id:4, type:'uint64' }
+        }},
+        FeedEntity: { fields: {
+          id:         { id:1, type:'string',    rule:'required' },
+          tripUpdate: { id:3, type:'TripUpdate' }
+        }},
+        TripUpdate: { fields: {
+          trip:           { id:1, type:'TripDescriptor', rule:'required' },
+          stopTimeUpdate: { id:2, type:'StopTimeUpdate', rule:'repeated' }
+        }},
+        TripDescriptor: { fields: {
+          tripId:  { id:1, type:'string' },
+          routeId: { id:5, type:'string' }
+        }},
+        StopTimeUpdate: { fields: {
+          stopSequence: { id:1, type:'uint32' },
+          stopId:       { id:4, type:'string' },
+          arrival:      { id:2, type:'StopTimeEvent' },
+          departure:    { id:3, type:'StopTimeEvent' }
+        }},
+        StopTimeEvent: { fields: {
+          delay:       { id:1, type:'int32' },
+          time:        { id:2, type:'int64' },
+          uncertainty: { id:3, type:'int32' }
+        }}
+      }
+    }
+  }
+}).lookupType('transit_realtime.FeedMessage');
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let cfg       = null;
+let activeTab = 0;
+let cdTimer   = null;
+let rfTimer   = null;
+
+// ── Config management ─────────────────────────────────────────────────────────
+function applyConfig() {
+  const raw = document.getElementById('cfg-ta').value.trim();
+  const err = document.getElementById('cfg-err');
+  err.style.display = 'none';
+
+  let parsed;
+  try { parsed = JSON.parse(raw); }
+  catch (e) {
+    err.textContent = 'JSON error: ' + e.message;
+    err.style.display = 'block';
+    return;
+  }
+
+  if (!Array.isArray(parsed.tabs)) {
+    err.textContent = 'Config must have a "tabs" array.';
+    err.style.display = 'block';
+    return;
+  }
+
+  localStorage.setItem('transit_cfg', raw);
+  cfg = parsed;
+  startApp();
+}
+
+function showCfgScreen() {
+  clearTimeout(rfTimer);
+  clearInterval(cdTimer);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('cfg').style.display  = 'flex';
+  const saved = localStorage.getItem('transit_cfg');
+  if (saved) document.getElementById('cfg-ta').value = saved;
+}
+
+function startApp() {
+  document.getElementById('cfg').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  buildTabs();
+  switchTab(0);
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────────
+function buildTabs() {
+  const bar = document.getElementById('tabs');
+  bar.innerHTML = '';
+  cfg.tabs.forEach((t, i) => {
+    const b = document.createElement('button');
+    b.className = 'tab';
+    b.textContent = t.label;
+    b.onclick = () => switchTab(i);
+    bar.appendChild(b);
+  });
+}
+
+function switchTab(i) {
+  clearTimeout(rfTimer);
+  clearInterval(cdTimer);
+  document.getElementById('refresh-cd').textContent = '';
+  activeTab = i;
+  document.querySelectorAll('.tab').forEach((b, j) => b.classList.toggle('on', j === i));
+  renderContent();
+  doRefresh();
+}
+
+// ── Content rendering ─────────────────────────────────────────────────────────
+function renderContent() {
+  const el  = document.getElementById('content');
+  const tab = cfg.tabs[activeTab];
+  if (!tab) return;
+
+  if (tab.type === 'cta-spot') {
+    const last = localStorage.getItem('transit_spot') || '';
+    el.innerHTML = `
+      <div id="spot-wrap">
+        <div id="spot-row">
+          <input id="spot-inp" type="text" inputmode="numeric"
+            placeholder="CTA stop number" value="${last}" onkeydown="if(event.key==='Enter')doSpot()">
+          <button id="spot-go" onclick="doSpot()">Go</button>
+        </div>
+        <div id="spot-results"></div>
+      </div>`;
+    return;
+  }
+
+  if (!tab.entries?.length) {
+    el.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No entries configured.</p>';
+    return;
+  }
+
+  el.innerHTML = '';
+  tab.entries.forEach((e, i) => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.id = `c${i}`;
+    card.innerHTML = cardHeader(e) + '<p class="card-status">Loading…</p>';
+    el.appendChild(card);
+  });
+}
+
+function cardHeader(entry) {
+  const route = entry.source === 'passio'
+    ? (entry.route_label || 'Downtown Campus Connector')
+    : 'Route ' + entry.route;
+  const stop = entry.source === 'passio'
+    ? entry.stop_name
+    : (entry.stop_label || 'Stop ' + entry.stop_id);
+  const dir = entry.direction
+    ? `\n<span class="dir-tag">${entry.direction}</span>`
+    : '';
+  return `<div class="card-route">${route}</div>
+<div class="card-stop">${stop}</div>${dir}\n`;
+}
+
+function setCard(i, arrivals) {
+  const card = document.getElementById('c' + i);
+  if (!card) return;
+  const tab = cfg.tabs[activeTab];
+
+  let body;
+  if (!arrivals.length) {
+    body = '<p class="card-status">No service</p>';
+  } else {
+    const chips = arrivals.map(m => {
+      if (m <= 0) return '<span class="chip due">Due</span>';
+      if (m <= 5) return `<span class="chip soon">${m} min</span>`;
+      return `<span class="chip">${m} min</span>`;
+    }).join('');
+    body = `<div class="arrivals">${chips}</div>`;
+  }
+
+  card.innerHTML = cardHeader(tab.entries[i]) + body;
+}
+
+function setCardErr(i, msg) {
+  const card = document.getElementById('c' + i);
+  if (!card) return;
+  const tab = cfg.tabs[activeTab];
+  card.innerHTML = cardHeader(tab.entries[i]) + `<p class="card-err">${msg}</p>`;
+}
+
+// ── Passio GTFS-RT ────────────────────────────────────────────────────────────
+async function fetchPassioFeed() {
+  const res = await fetch('https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates');
+  if (!res.ok) throw new Error('Passio HTTP ' + res.status);
+  const buf = await res.arrayBuffer();
+  return FeedMessage.decode(new Uint8Array(buf));
+}
+
+function longToSecs(val) {
+  if (!val) return null;
+  // protobufjs returns Long objects for int64 fields
+  if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
+  return Number(val);
+}
+
+function getPassioArrivals(feed, routeId, stopId, max = 3) {
+  const now = Math.floor(Date.now() / 1000);
+  const mins = [];
+  const rid = String(routeId);
+  const sid = String(stopId);
+
+  for (const ent of (feed.entity || [])) {
+    if (!ent.tripUpdate) continue;
+    const feedRouteId = ent.tripUpdate.trip?.routeId;
+    if (feedRouteId && feedRouteId !== rid) continue;
+
+    for (const stu of (ent.tripUpdate.stopTimeUpdate || [])) {
+      if (stu.stopId !== sid) continue;
+      const t = longToSecs(stu.arrival?.time) ?? longToSecs(stu.departure?.time);
+      if (t && t > now - 60) {
+        mins.push(Math.round((t - now) / 60));
+      }
+    }
+  }
+
+  return mins.sort((a, b) => a - b).slice(0, max);
+}
+
+// ── CTA via allorigins.win proxy ──────────────────────────────────────────────
+const CTA_BASE  = 'https://www.ctabustracker.com/bustime/api/v2/getpredictions';
+const CTA_PROXY = 'https://api.allorigins.win/raw?url=';
+
+async function fetchCTA(stopId, route) {
+  if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
+    throw new Error('No CTA API key — add one to your config');
+  }
+
+  const params = new URLSearchParams({
+    key: cfg.cta_api_key,
+    stpid: String(stopId),
+    format: 'json'
+  });
+  if (route) params.set('rt', String(route));
+
+  const target = `${CTA_BASE}?${params}`;
+  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
+
+  const data  = await res.json();
+  const btr   = data?.['bustime-response'];
+  const errs  = btr?.error;
+  const preds = btr?.prd || [];
+
+  if (!preds.length && errs?.length) {
+    throw new Error(errs[0]?.msg || 'CTA error');
+  }
+
+  return preds
+    .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
+    .filter(m => !isNaN(m))
+    .slice(0, 3);
+}
+
+async function fetchCTARaw(stopId) {
+  if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
+    throw new Error('No CTA API key — add one to your config');
+  }
+
+  const params = new URLSearchParams({
+    key: cfg.cta_api_key,
+    stpid: String(stopId),
+    format: 'json'
+  });
+
+  const target = `${CTA_BASE}?${params}`;
+  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
+
+  const data  = await res.json();
+  const btr   = data?.['bustime-response'];
+  const errs  = btr?.error;
+  const preds = btr?.prd || [];
+
+  if (!preds.length && errs?.length) throw new Error(errs[0]?.msg || 'CTA error');
+  return preds;
+}
+
+// ── Refresh logic ─────────────────────────────────────────────────────────────
+async function doRefresh() {
+  clearTimeout(rfTimer);
+  clearInterval(cdTimer);
+  document.getElementById('refresh-cd').textContent = '';
+
+  const tab = cfg?.tabs[activeTab];
+  if (!tab) return;
+
+  if (tab.type === 'cta-spot') {
+    scheduleNext();
+    return;
+  }
+
+  if (!tab.entries?.length) {
+    scheduleNext();
+    return;
+  }
+
+  // Fetch Passio feed once if any entry needs it
+  let passioFeed = null;
+  let passioErr  = null;
+  if (tab.entries.some(e => e.source === 'passio')) {
+    try {
+      passioFeed = await fetchPassioFeed();
+    } catch (e) {
+      passioErr = e.message;
+    }
+  }
+
+  // Fetch each entry (CTA calls can run in parallel)
+  const promises = tab.entries.map(async (entry, i) => {
+    try {
+      if (entry.source === 'passio') {
+        if (passioErr) throw new Error(passioErr);
+        const arrivals = getPassioArrivals(passioFeed, entry.route_id, entry.stop_id);
+        setCard(i, arrivals);
+      } else if (entry.source === 'cta') {
+        const arrivals = await fetchCTA(entry.stop_id, entry.route);
+        setCard(i, arrivals);
+      }
+    } catch (e) {
+      setCardErr(i, e.message);
+    }
+  });
+
+  await Promise.all(promises);
+  scheduleNext();
+}
+
+function scheduleNext() {
+  let secs = 30;
+  const cdEl = document.getElementById('refresh-cd');
+  cdTimer = setInterval(() => {
+    cdEl.textContent = (--secs) + 's';
+    if (secs <= 0) clearInterval(cdTimer);
+  }, 1000);
+  rfTimer = setTimeout(doRefresh, 30_000);
+}
+
+// ── CTA Spot check ────────────────────────────────────────────────────────────
+async function doSpot() {
+  const inp  = document.getElementById('spot-inp').value.trim();
+  const res  = document.getElementById('spot-results');
+  if (!inp) return;
+
+  localStorage.setItem('transit_spot', inp);
+  res.innerHTML = '<p class="card-status">Loading…</p>';
+
+  try {
+    const preds = await fetchCTARaw(inp);
+
+    if (!preds.length) {
+      res.innerHTML = '<p class="card-status">No arrivals found for this stop.</p>';
+      return;
+    }
+
+    // Group by route
+    const byRoute = {};
+    for (const p of preds) {
+      if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, mins: [] };
+      const m = p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10);
+      if (!isNaN(m)) byRoute[p.rt].mins.push(m);
+    }
+
+    res.innerHTML = Object.values(byRoute).map(r => {
+      const chips = r.mins.slice(0, 3).map(m => {
+        if (m <= 0) return '<span class="chip due">Due</span>';
+        if (m <= 5) return `<span class="chip soon">${m} min</span>`;
+        return `<span class="chip">${m} min</span>`;
+      }).join('');
+      return `<div class="card">
+        <div class="card-route">Route ${r.rt} — ${r.des}</div>
+        <div class="card-stop">${r.dir}</div>
+        <div class="arrivals">${chips}</div>
+      </div>`;
+    }).join('');
+  } catch (e) {
+    res.innerHTML = `<p class="card-err">${e.message}</p>`;
+  }
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+try {
+  const saved = localStorage.getItem('transit_cfg');
+  if (saved) {
+    cfg = JSON.parse(saved);
+    startApp();
+  }
+} catch {
+  // malformed saved config — stay on config screen
+}
+</script>
+</body>
+</html>
