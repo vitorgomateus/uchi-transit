@@ -19,23 +19,19 @@
       -webkit-font-smoothing: antialiased;
     }
 
+    .visually-hidden {
+      position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+      overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
     /* ── Config screen ───────────────────────────────────── */
     #cfg {
       min-height: 100dvh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 24px;
-      gap: 16px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 24px; gap: 16px;
     }
-
     #cfg h1 { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; }
-
-    #cfg p {
-      color: #8e8e93; font-size: 15px; text-align: center;
-      line-height: 1.5; max-width: 360px;
-    }
+    #cfg p  { color: #8e8e93; font-size: 15px; text-align: center; line-height: 1.5; max-width: 360px; }
 
     #cfg-ta {
       width: 100%; max-width: 480px; height: 200px;
@@ -52,6 +48,7 @@
       padding: 14px 0; font-size: 17px; font-weight: 600; cursor: pointer;
       width: 100%; max-width: 480px;
     }
+    .primary-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
     .primary-btn:active { opacity: 0.8; }
 
     /* ── App ─────────────────────────────────────────────── */
@@ -66,68 +63,57 @@
       border-bottom: 0.5px solid #3a3a3c;
       padding: 12px 16px 0;
     }
-
-    #hdr-top {
-      display: flex; align-items: center; justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
+    #hdr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     #hdr-title { font-size: 20px; font-weight: 700; }
-
     #hdr-right { display: flex; align-items: center; gap: 10px; }
-
     #refresh-cd { font-size: 13px; color: #636366; min-width: 28px; text-align: right; }
 
     #refresh-btn {
       background: none; border: none; color: #0a84ff; cursor: pointer;
-      font-size: 15px; font-weight: 500; padding: 4px 6px;
+      font-size: 15px; font-weight: 500; padding: 4px 6px; border-radius: 4px;
     }
+    #refresh-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 
     #cfg-link {
       background: none; border: none; color: #636366; cursor: pointer;
-      font-size: 13px; padding: 4px 0;
+      font-size: 13px; padding: 4px 0; border-radius: 4px;
     }
+    #cfg-link:focus-visible { outline: 2px solid #636366; outline-offset: 2px; }
 
     /* Tabs */
-    #tabs {
-      display: flex; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none;
-    }
+    #tabs { display: flex; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
     #tabs::-webkit-scrollbar { display: none; }
 
     .tab {
-      background: none; border: none;
-      border-bottom: 2px solid transparent;
-      color: #8e8e93; cursor: pointer;
-      font-size: 14px; font-weight: 500;
+      background: none; border: none; border-bottom: 2px solid transparent;
+      color: #8e8e93; cursor: pointer; font-size: 14px; font-weight: 500;
       padding: 8px 14px; white-space: nowrap;
       transition: color 0.15s, border-color 0.15s;
     }
     .tab.on { color: #fff; border-bottom-color: #0a84ff; }
+    .tab:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; }
 
     /* Content */
-    #content {
-      flex: 1; padding: 12px 16px;
-      display: flex; flex-direction: column; gap: 10px;
-    }
+    #content { flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
 
-    /* Entry cards */
-    .card {
-      background: #1c1c1e; border-radius: 12px; padding: 14px 16px;
-    }
-
+    /* Cards */
+    .card { background: #1c1c1e; border-radius: 12px; padding: 14px 16px; }
     .card-route { font-size: 15px; font-weight: 600; }
     .card-stop  { font-size: 13px; color: #8e8e93; margin-top: 2px; }
 
+    /* Stop-grouped rows */
+    .stop-entries { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+    .stop-row     { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+
     .dir-tag {
-      display: inline-block; margin-top: 5px;
+      display: inline-flex; align-items: center;
       background: #2c2c2e; border-radius: 6px;
       padding: 2px 8px; font-size: 11px; font-weight: 500;
       color: #ebebf5; text-transform: uppercase; letter-spacing: 0.3px;
+      white-space: nowrap; flex-shrink: 0;
     }
 
-    .arrivals {
-      display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px;
-    }
+    .arrivals { display: flex; flex-wrap: wrap; gap: 8px; }
 
     .chip {
       background: #2c2c2e; border-radius: 8px;
@@ -135,14 +121,29 @@
     }
     .chip.due  { background: rgba(255,214,10,0.15); color: #ffd60a; }
     .chip.soon { color: #30d158; }
+    .chip-approx { font-size: 11px; font-weight: 400; color: #636366; margin-left: 5px; }
 
-    .card-status { font-size: 14px; color: #636366; margin-top: 10px; }
-    .card-err    { font-size: 13px; color: #ff453a; margin-top: 10px; }
+    .card-status { font-size: 14px; color: #636366; }
+    .card-err    { font-size: 13px; color: #ff453a; }
+
+    /* Debug block */
+    details.debug-block { margin-top: 4px; }
+    details.debug-block > summary {
+      font-size: 12px; color: #3a3a3c; cursor: pointer; padding: 6px 0;
+      user-select: none; list-style: none;
+    }
+    details.debug-block > summary::-webkit-details-marker { display: none; }
+    details.debug-block > summary:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 2px; }
+    details.debug-block pre {
+      background: #0d0d0d; border: 0.5px solid #2c2c2e; border-radius: 8px;
+      padding: 10px 12px; font-family: 'Menlo', 'Monaco', monospace; font-size: 10px;
+      color: #636366; overflow-x: auto; margin-top: 4px;
+      white-space: pre; max-height: 400px; overflow-y: auto;
+    }
 
     /* CTA Spot */
     #spot-wrap { display: flex; flex-direction: column; gap: 12px; }
-
-    #spot-row { display: flex; gap: 8px; }
+    #spot-row  { display: flex; gap: 8px; }
 
     #spot-inp {
       flex: 1; background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 10px;
@@ -155,6 +156,7 @@
       color: #fff; cursor: pointer; font-size: 17px; font-weight: 600;
       padding: 10px 18px;
     }
+    #spot-go:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
     #spot-go:active { opacity: 0.8; }
 
     #spot-results { display: flex; flex-direction: column; gap: 10px; }
@@ -166,30 +168,31 @@
 <div id="cfg">
   <h1>Transit</h1>
   <p>Paste your config JSON to get started. It stays in this browser only — nothing leaves this device.</p>
+  <label for="cfg-ta" class="visually-hidden">Config JSON</label>
   <textarea id="cfg-ta" spellcheck="false"
     placeholder='{ "passio_system_id": 1068, "cta_api_key": "...", "tabs": [...] }'></textarea>
-  <div id="cfg-err"></div>
+  <div id="cfg-err" role="alert"></div>
   <button class="primary-btn" onclick="applyConfig()">Load config</button>
 </div>
 
 <!-- App -->
 <div id="app">
-  <div id="hdr">
+  <header id="hdr">
     <div id="hdr-top">
       <span id="hdr-title">Transit</span>
       <div id="hdr-right">
         <span id="refresh-cd"></span>
-        <button id="refresh-btn" onclick="doRefresh()">↻ Refresh</button>
+        <button id="refresh-btn" onclick="doRefresh()" aria-label="Refresh now">↻ Refresh</button>
         <button id="cfg-link" onclick="showCfgScreen()">Config</button>
       </div>
     </div>
-    <div id="tabs"></div>
-  </div>
-  <div id="content"></div>
+    <nav id="tabs" aria-label="Transit tabs"></nav>
+  </header>
+  <main id="content"></main>
 </div>
 
 <script>
-// ── Protobuf: minimal GTFS-RT descriptor ─────────────────────────────────────
+// ── Protobuf: GTFS-RT (TripUpdates + VehiclePositions) ───────────────────────
 const FeedMessage = protobuf.Root.fromJSON({
   nested: {
     transit_realtime: {
@@ -203,12 +206,18 @@ const FeedMessage = protobuf.Root.fromJSON({
           timestamp:           { id:4, type:'uint64' }
         }},
         FeedEntity: { fields: {
-          id:         { id:1, type:'string',    rule:'required' },
-          tripUpdate: { id:3, type:'TripUpdate' }
+          id:         { id:1, type:'string',          rule:'required' },
+          tripUpdate: { id:3, type:'TripUpdate' },
+          vehicle:    { id:4, type:'VehiclePosition' }
         }},
         TripUpdate: { fields: {
           trip:           { id:1, type:'TripDescriptor', rule:'required' },
           stopTimeUpdate: { id:2, type:'StopTimeUpdate', rule:'repeated' }
+        }},
+        VehiclePosition: { fields: {
+          trip:     { id:1, type:'TripDescriptor' },
+          vehicle:  { id:2, type:'VehicleDescriptor' },
+          position: { id:3, type:'Position' }
         }},
         TripDescriptor: { fields: {
           tripId:  { id:1, type:'string' },
@@ -224,6 +233,16 @@ const FeedMessage = protobuf.Root.fromJSON({
           delay:       { id:1, type:'int32' },
           time:        { id:2, type:'int64' },
           uncertainty: { id:3, type:'int32' }
+        }},
+        Position: { fields: {
+          latitude:  { id:1, type:'float', rule:'required' },
+          longitude: { id:2, type:'float', rule:'required' },
+          bearing:   { id:3, type:'float' },
+          speed:     { id:5, type:'float' }
+        }},
+        VehicleDescriptor: { fields: {
+          id:    { id:1, type:'string' },
+          label: { id:2, type:'string' }
         }}
       }
     }
@@ -231,10 +250,12 @@ const FeedMessage = protobuf.Root.fromJSON({
 }).lookupType('transit_realtime.FeedMessage');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let cfg       = null;
-let activeTab = 0;
-let cdTimer   = null;
-let rfTimer   = null;
+let cfg          = null;
+let activeTab    = 0;
+let cdTimer      = null;
+let rfTimer      = null;
+let lastPassio   = null;
+let lastVehicles = null;
 
 // ── Config management ─────────────────────────────────────────────────────────
 function applyConfig() {
@@ -284,6 +305,8 @@ function buildTabs() {
   cfg.tabs.forEach((t, i) => {
     const b = document.createElement('button');
     b.className = 'tab';
+    b.setAttribute('role', 'tab');
+    b.setAttribute('aria-selected', 'false');
     b.textContent = t.label;
     b.onclick = () => switchTab(i);
     bar.appendChild(b);
@@ -295,7 +318,10 @@ function switchTab(i) {
   clearInterval(cdTimer);
   document.getElementById('refresh-cd').textContent = '';
   activeTab = i;
-  document.querySelectorAll('.tab').forEach((b, j) => b.classList.toggle('on', j === i));
+  document.querySelectorAll('.tab').forEach((b, j) => {
+    b.classList.toggle('on', j === i);
+    b.setAttribute('aria-selected', j === i ? 'true' : 'false');
+  });
   renderContent();
   doRefresh();
 }
@@ -311,11 +337,13 @@ function renderContent() {
     el.innerHTML = `
       <div id="spot-wrap">
         <div id="spot-row">
+          <label for="spot-inp" class="visually-hidden">CTA stop number</label>
           <input id="spot-inp" type="text" inputmode="numeric"
-            placeholder="CTA stop number" value="${last}" onkeydown="if(event.key==='Enter')doSpot()">
+            placeholder="CTA stop number" value="${last}"
+            onkeydown="if(event.key==='Enter')doSpot()">
           <button id="spot-go" onclick="doSpot()">Go</button>
         </div>
-        <div id="spot-results"></div>
+        <div id="spot-results" aria-live="polite"></div>
       </div>`;
     return;
   }
@@ -326,74 +354,109 @@ function renderContent() {
   }
 
   el.innerHTML = '';
-  tab.entries.forEach((e, i) => {
+
+  // Group entries by source+stop_id so same physical stop collapses into one card
+  const groups = new Map();
+  tab.entries.forEach((entry, idx) => {
+    const key = `${entry.source}-${entry.stop_id}`;
+    if (!groups.has(key)) {
+      const stopName = entry.source === 'passio'
+        ? (entry.stop_name   || `Stop ${entry.stop_id}`)
+        : (entry.stop_label  || `Stop ${entry.stop_id}`);
+      groups.set(key, { stopName, entries: [] });
+    }
+    groups.get(key).entries.push({ entry, idx });
+  });
+
+  for (const group of groups.values()) {
     const card = document.createElement('div');
     card.className = 'card';
-    card.id = `c${i}`;
-    card.innerHTML = cardHeader(e) + '<p class="card-status">Loading…</p>';
+
+    const routeLabels = [...new Set(group.entries.map(({ entry: e }) =>
+      e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`
+    ))];
+    const sharedRoute = routeLabels.length === 1 ? routeLabels[0] : '';
+
+    let html = '';
+    if (sharedRoute) html += `<div class="card-route">${sharedRoute}</div>`;
+    html += `<div class="card-stop">${group.stopName}</div>`;
+    html += '<div class="stop-entries">';
+
+    for (const { entry: e, idx } of group.entries) {
+      const perRowRoute = !sharedRoute
+        ? (e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`)
+        : '';
+      html += '<div class="stop-row">';
+      if (perRowRoute) html += `<span class="card-route" style="width:100%;margin-bottom:2px">${perRowRoute}</span>`;
+      if (e.direction) html += `<span class="dir-tag">${e.direction}</span>`;
+      html += `<div class="arrivals" id="row-${idx}"><span class="card-status">Loading…</span></div>`;
+      html += '</div>';
+    }
+
+    html += '</div>';
+    card.innerHTML = html;
     el.appendChild(card);
-  });
-}
-
-function cardHeader(entry) {
-  const route = entry.source === 'passio'
-    ? (entry.route_label || 'Downtown Campus Connector')
-    : 'Route ' + entry.route;
-  const stop = entry.source === 'passio'
-    ? entry.stop_name
-    : (entry.stop_label || 'Stop ' + entry.stop_id);
-  const dir = entry.direction
-    ? `\n<span class="dir-tag">${entry.direction}</span>`
-    : '';
-  return `<div class="card-route">${route}</div>
-<div class="card-stop">${stop}</div>${dir}\n`;
-}
-
-function setCard(i, arrivals) {
-  const card = document.getElementById('c' + i);
-  if (!card) return;
-  const tab = cfg.tabs[activeTab];
-
-  let body;
-  if (!arrivals.length) {
-    body = '<p class="card-status">No service</p>';
-  } else {
-    const chips = arrivals.map(m => {
-      if (m <= 0) return '<span class="chip due">Due</span>';
-      if (m <= 5) return `<span class="chip soon">${m} min</span>`;
-      return `<span class="chip">${m} min</span>`;
-    }).join('');
-    body = `<div class="arrivals">${chips}</div>`;
   }
 
-  card.innerHTML = cardHeader(tab.entries[i]) + body;
+  // Collapsible raw feed debug block
+  const dbk = document.createElement('details');
+  dbk.className = 'debug-block';
+  dbk.id = 'debug-block';
+  dbk.innerHTML = '<summary>Raw feed data</summary><pre id="debug-pre">(waiting for refresh)</pre>';
+  el.appendChild(dbk);
 }
 
-function setCardErr(i, msg) {
-  const card = document.getElementById('c' + i);
-  if (!card) return;
-  const tab = cfg.tabs[activeTab];
-  card.innerHTML = cardHeader(tab.entries[i]) + `<p class="card-err">${msg}</p>`;
+// ── Row updaters ──────────────────────────────────────────────────────────────
+function setRowArrivals(i, arrivals) {
+  const el = document.getElementById(`row-${i}`);
+  if (!el) return;
+
+  if (!arrivals.length) {
+    el.innerHTML = '<span class="card-status">No service</span>';
+    return;
+  }
+
+  el.innerHTML = arrivals.map(({ raw, approx }) => {
+    let cls = 'chip';
+    if (raw <= 0) cls = 'chip due';
+    else if (raw <= 5) cls = 'chip soon';
+    const label = raw <= 0 ? 'Due' : `${raw} min`;
+    const approxSpan = approx != null
+      ? `<span class="chip-approx" aria-label="estimated ${approx} minutes">[${approx}m]</span>`
+      : '';
+    return `<span class="${cls}">${label}${approxSpan}</span>`;
+  }).join('');
+}
+
+function setRowErr(i, msg) {
+  const el = document.getElementById(`row-${i}`);
+  if (!el) return;
+  el.innerHTML = `<span class="card-err">${msg}</span>`;
 }
 
 // ── Passio GTFS-RT ────────────────────────────────────────────────────────────
 async function fetchPassioFeed() {
   const res = await fetch('https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates');
   if (!res.ok) throw new Error('Passio HTTP ' + res.status);
-  const buf = await res.arrayBuffer();
-  return FeedMessage.decode(new Uint8Array(buf));
+  return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
+}
+
+async function fetchPassioVehicles() {
+  const res = await fetch('https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions');
+  if (!res.ok) throw new Error('Vehicles HTTP ' + res.status);
+  return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
 }
 
 function longToSecs(val) {
   if (!val) return null;
-  // protobufjs returns Long objects for int64 fields
   if (typeof val === 'object' && typeof val.toNumber === 'function') return val.toNumber();
   return Number(val);
 }
 
+// Returns [{raw, tripId}] sorted ascending, capped at max
 function getPassioArrivals(feed, routeId, stopId, max = 3) {
   const now = Math.floor(Date.now() / 1000);
-  const mins = [];
+  const results = [];
   const rid = String(routeId);
   const sid = String(stopId);
 
@@ -406,12 +469,84 @@ function getPassioArrivals(feed, routeId, stopId, max = 3) {
       if (stu.stopId !== sid) continue;
       const t = longToSecs(stu.arrival?.time) ?? longToSecs(stu.departure?.time);
       if (t && t > now - 60) {
-        mins.push(Math.round((t - now) / 60));
+        results.push({ raw: Math.round((t - now) / 60), tripId: ent.tripUpdate.trip?.tripId || ent.id });
       }
     }
   }
 
-  return mins.sort((a, b) => a - b).slice(0, max);
+  return results.sort((a, b) => a.raw - b.raw).slice(0, max);
+}
+
+// ── Haversine distance-based ETA approximation ────────────────────────────────
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R    = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a    = Math.sin(dLat/2)**2
+    + Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function getVehiclePos(vehiclesFeed, tripId) {
+  if (!vehiclesFeed || !tripId) return null;
+  for (const ent of (vehiclesFeed.entity || [])) {
+    const vp = ent.vehicle;
+    if (vp?.trip?.tripId === tripId && vp.position) {
+      return { lat: vp.position.latitude, lon: vp.position.longitude };
+    }
+  }
+  return null;
+}
+
+// Only runs for arrivals with raw <= 12 min and entries that have stop_lat/stop_lon in config.
+// Effective speed assumes ~15 mph average with a 1.3 road-to-crow-flies factor → ~18.5 km/h haversine.
+function addApproxEtas(arrivals, vehiclesFeed, entry) {
+  const hasCoords = entry.stop_lat != null && entry.stop_lon != null;
+  return arrivals.map(a => {
+    if (!hasCoords || a.raw > 12) return { ...a, approx: null };
+    const pos = getVehiclePos(vehiclesFeed, a.tripId);
+    if (!pos) return { ...a, approx: null };
+    const km = haversineKm(pos.lat, pos.lon, entry.stop_lat, entry.stop_lon);
+    return { ...a, approx: Math.round(km / 18.5 * 60) };
+  });
+}
+
+// ── Debug block ───────────────────────────────────────────────────────────────
+function updateDebug(tab, passioFeed) {
+  const pre = document.getElementById('debug-pre');
+  if (!pre) return;
+
+  const now = Math.floor(Date.now() / 1000);
+
+  if (!passioFeed || !tab.entries?.some(e => e.source === 'passio')) {
+    pre.textContent = '(no Passio data for this tab)';
+    return;
+  }
+
+  const routeIds = new Set(
+    tab.entries.filter(e => e.source === 'passio').map(e => String(e.route_id))
+  );
+  const entities = (passioFeed.entity || []).filter(ent => {
+    const rid = ent.tripUpdate?.trip?.routeId;
+    return !rid || routeIds.has(rid);
+  });
+
+  pre.textContent = JSON.stringify({
+    feed_ts:        longToSecs(passioFeed.header?.timestamp),
+    fetched_at:     new Date().toISOString(),
+    matching_trips: entities.length,
+    trips: entities.map(ent => ({
+      entity_id: ent.id,
+      trip_id:   ent.tripUpdate?.trip?.tripId,
+      route_id:  ent.tripUpdate?.trip?.routeId,
+      stops: (ent.tripUpdate?.stopTimeUpdate || []).map(stu => ({
+        stop_id:  stu.stopId,
+        stop_seq: stu.stopSequence,
+        arr_min:  stu.arrival?.time   ? Math.round((longToSecs(stu.arrival.time)   - now) / 60) : null,
+        dep_min:  stu.departure?.time ? Math.round((longToSecs(stu.departure.time) - now) / 60) : null,
+      }))
+    }))
+  }, null, 2);
 }
 
 // ── CTA via allorigins.win proxy ──────────────────────────────────────────────
@@ -423,29 +558,21 @@ async function fetchCTA(stopId, route) {
     throw new Error('No CTA API key — add one to your config');
   }
 
-  const params = new URLSearchParams({
-    key: cfg.cta_api_key,
-    stpid: String(stopId),
-    format: 'json'
-  });
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), format: 'json' });
   if (route) params.set('rt', String(route));
 
-  const target = `${CTA_BASE}?${params}`;
-  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  const res  = await fetch(CTA_PROXY + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
   const data  = await res.json();
   const btr   = data?.['bustime-response'];
-  const errs  = btr?.error;
   const preds = btr?.prd || [];
-
-  if (!preds.length && errs?.length) {
-    throw new Error(errs[0]?.msg || 'CTA error');
-  }
+  const errs  = btr?.error;
+  if (!preds.length && errs?.length) throw new Error(errs[0]?.msg || 'CTA error');
 
   return preds
-    .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
-    .filter(m => !isNaN(m))
+    .map(p => ({ raw: p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10), approx: null }))
+    .filter(a => !isNaN(a.raw))
     .slice(0, 3);
 }
 
@@ -454,21 +581,14 @@ async function fetchCTARaw(stopId) {
     throw new Error('No CTA API key — add one to your config');
   }
 
-  const params = new URLSearchParams({
-    key: cfg.cta_api_key,
-    stpid: String(stopId),
-    format: 'json'
-  });
-
-  const target = `${CTA_BASE}?${params}`;
-  const res    = await fetch(CTA_PROXY + encodeURIComponent(target));
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), format: 'json' });
+  const res    = await fetch(CTA_PROXY + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
   const data  = await res.json();
   const btr   = data?.['bustime-response'];
-  const errs  = btr?.error;
   const preds = btr?.prd || [];
-
+  const errs  = btr?.error;
   if (!preds.length && errs?.length) throw new Error(errs[0]?.msg || 'CTA error');
   return preds;
 }
@@ -482,44 +602,41 @@ async function doRefresh() {
   const tab = cfg?.tabs[activeTab];
   if (!tab) return;
 
-  if (tab.type === 'cta-spot') {
-    scheduleNext();
-    return;
+  if (tab.type === 'cta-spot') { scheduleNext(); return; }
+  if (!tab.entries?.length)    { scheduleNext(); return; }
+
+  const hasPassio     = tab.entries.some(e => e.source === 'passio');
+  const needsVehicles = hasPassio && tab.entries.some(e => e.stop_lat != null);
+
+  let passioFeed = null, passioErr = null, vehiclesFeed = null;
+
+  if (hasPassio) {
+    const [pf, vf] = await Promise.all([
+      fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
+      needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null)
+    ]);
+    passioFeed   = pf;
+    vehiclesFeed = vf;
+    lastPassio   = pf;
+    lastVehicles = vf;
   }
 
-  if (!tab.entries?.length) {
-    scheduleNext();
-    return;
-  }
-
-  // Fetch Passio feed once if any entry needs it
-  let passioFeed = null;
-  let passioErr  = null;
-  if (tab.entries.some(e => e.source === 'passio')) {
-    try {
-      passioFeed = await fetchPassioFeed();
-    } catch (e) {
-      passioErr = e.message;
-    }
-  }
-
-  // Fetch each entry (CTA calls can run in parallel)
-  const promises = tab.entries.map(async (entry, i) => {
+  await Promise.all(tab.entries.map(async (entry, i) => {
     try {
       if (entry.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
-        const arrivals = getPassioArrivals(passioFeed, entry.route_id, entry.stop_id);
-        setCard(i, arrivals);
+        const raw      = getPassioArrivals(passioFeed, entry.route_id, entry.stop_id);
+        const arrivals = addApproxEtas(raw, vehiclesFeed, entry);
+        setRowArrivals(i, arrivals);
       } else if (entry.source === 'cta') {
-        const arrivals = await fetchCTA(entry.stop_id, entry.route);
-        setCard(i, arrivals);
+        setRowArrivals(i, await fetchCTA(entry.stop_id, entry.route));
       }
     } catch (e) {
-      setCardErr(i, e.message);
+      setRowErr(i, e.message);
     }
-  });
+  }));
 
-  await Promise.all(promises);
+  updateDebug(tab, passioFeed);
   scheduleNext();
 }
 
@@ -535,8 +652,8 @@ function scheduleNext() {
 
 // ── CTA Spot check ────────────────────────────────────────────────────────────
 async function doSpot() {
-  const inp  = document.getElementById('spot-inp').value.trim();
-  const res  = document.getElementById('spot-results');
+  const inp = document.getElementById('spot-inp').value.trim();
+  const res = document.getElementById('spot-results');
   if (!inp) return;
 
   localStorage.setItem('transit_spot', inp);
@@ -544,13 +661,11 @@ async function doSpot() {
 
   try {
     const preds = await fetchCTARaw(inp);
-
     if (!preds.length) {
       res.innerHTML = '<p class="card-status">No arrivals found for this stop.</p>';
       return;
     }
 
-    // Group by route
     const byRoute = {};
     for (const p of preds) {
       if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, mins: [] };
