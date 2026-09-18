@@ -367,40 +367,32 @@ function renderContent() {
     return;
   }
 
-  if (!tab.entries?.length) {
-    el.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No entries configured.</p>';
+  const stops = tab.stops || [];
+  if (!stops.length) {
+    el.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No stops configured.</p>';
     return;
   }
 
   el.innerHTML = '';
+  let feedIdx = 0;
 
-  // Group entries: same physical stop via entry.group, else source+stop_id
-  const groups = new Map();
-  tab.entries.forEach((entry, idx) => {
-    const key = entry.group ?? `${entry.source}-${entry.stop_id}`;
-    if (!groups.has(key)) {
-      const stopName = entry.stop_name || entry.stop_label || `Stop ${entry.stop_id}`;
-      groups.set(key, { key, stopName, entries: [] });
-    }
-    groups.get(key).entries.push({ entry, idx });
-  });
-
-  for (const group of groups.values()) {
+  for (const stop of stops) {
     const card = document.createElement('div');
     card.className = 'stop-card';
-    card.dataset.gid = group.key;
+    card.dataset.gid = stop.label;
 
-    let html = `<div class="stop-name">${group.stopName}</div>`;
+    let html = `<div class="stop-name">${stop.label}</div>`;
     html += '<span class="no-svc-label">No service scheduled</span>';
     html += '<div class="route-rows">';
 
-    for (const { entry: e, idx } of group.entries) {
-      const routeLbl = e.source === 'passio' ? (e.route_label || '') : `Route ${e.route}`;
+    for (const feed of (stop.feeds || [])) {
+      const routeLbl = feed.source === 'passio' ? (feed.route_label || '') : `Route ${feed.route}`;
       html += '<div class="route-row">';
-      if (routeLbl)  html += `<span class="route-lbl">${routeLbl}</span>`;
-      if (e.direction) html += `<span class="dir-lbl">${e.direction}</span>`;
-      html += `<div class="arrivals" id="row-${idx}" data-idx="${idx}"><span class="card-status">…</span></div>`;
+      if (routeLbl)     html += `<span class="route-lbl">${routeLbl}</span>`;
+      if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
+      html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}"><span class="card-status">…</span></div>`;
       html += '</div>';
+      feedIdx++;
     }
 
     html += '</div>';
@@ -526,13 +518,13 @@ function getVehiclePos(vehiclesFeed, tripId) {
 }
 
 // Returns [{m, approx}] — approx is null when no position data available
-function addApproxEtas(arrivals, vehiclesFeed, entry) {
-  const hasCoords = entry.stop_lat != null && entry.stop_lon != null;
+function addApproxEtas(arrivals, vehiclesFeed, stop) {
+  const hasCoords = stop.lat != null && stop.lon != null;
   return arrivals.map(a => {
     if (!hasCoords || a.m > 12) return { m: a.m, approx: null };
     const pos = getVehiclePos(vehiclesFeed, a.tripId);
     if (!pos) return { m: a.m, approx: null };
-    const km = haversineKm(pos.lat, pos.lon, entry.stop_lat, entry.stop_lon);
+    const km = haversineKm(pos.lat, pos.lon, stop.lat, stop.lon);
     return { m: a.m, approx: Math.round(km / 18.5 * 60) };
   });
 }
@@ -543,14 +535,15 @@ function updateDebug(tab, passioFeed) {
   if (!pre) return;
 
   const now = Math.floor(Date.now() / 1000);
+  const allFeeds = (tab.stops || []).flatMap(s => s.feeds || []);
 
-  if (!passioFeed || !tab.entries?.some(e => e.source === 'passio')) {
+  if (!passioFeed || !allFeeds.some(f => f.source === 'passio')) {
     pre.textContent = '(no Passio data for this tab)';
     return;
   }
 
   const routeIds = new Set(
-    tab.entries.filter(e => e.source === 'passio').map(e => String(e.route_id))
+    allFeeds.filter(f => f.source === 'passio').map(f => String(f.route_id))
   );
   const entities = (passioFeed.entity || []).filter(ent => {
     const rid = ent.tripUpdate?.trip?.routeId;
@@ -581,15 +574,15 @@ const ctaProxy   = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw'
 // API messages meaning "no vehicles right now" — collapse the card, not a red error
 const CTA_NO_SVC = new Set(['No service scheduled', 'No arrival times', 'No actual times']);
 
-async function fetchCTA(stopId, route) {
+async function fetchCTABatch(stopId, routes) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
     throw new Error('No CTA API key — add one to your config');
   }
 
   const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), format: 'json' });
-  if (route) params.set('rt', String(route));
+  if (routes.length) params.set('rt', routes.join(','));
 
-  const res  = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
+  const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
   const data  = await res.json();
@@ -602,10 +595,7 @@ async function fetchCTA(stopId, route) {
     throw new Error(msg);
   }
 
-  return preds
-    .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
-    .filter(m => !isNaN(m))
-    .slice(0, 3);
+  return preds;
 }
 
 async function fetchCTARaw(stopId) {
@@ -635,35 +625,80 @@ async function doRefresh() {
   if (!tab) return;
 
   if (tab.type === 'cta-spot') { scheduleNext(); return; }
-  if (!tab.entries?.length)    { scheduleNext(); return; }
 
-  const hasPassio     = tab.entries.some(e => e.source === 'passio');
-  const needsVehicles = hasPassio && tab.entries.some(e => e.stop_lat != null);
-  let passioFeed = null, passioErr = null, vehiclesFeed = null;
+  const stops = tab.stops || [];
+  if (!stops.length) { scheduleNext(); return; }
 
-  if (hasPassio) {
-    const [pf, vf] = await Promise.all([
-      fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
-      needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
-    ]);
-    passioFeed = pf; vehiclesFeed = vf; lastPassio = pf;
+  // Flatten stops → feeds, assigning sequential row indices matching renderContent
+  const allFeeds = [];
+  let idx = 0;
+  for (const stop of stops) {
+    for (const feed of (stop.feeds || [])) {
+      allFeeds.push({ stop, feed, idx: idx++ });
+    }
   }
 
-  await Promise.all(tab.entries.map(async (entry, i) => {
+  const hasPassio     = allFeeds.some(f => f.feed.source === 'passio');
+  const needsVehicles = hasPassio && stops.some(s => s.lat != null);
+  let passioFeed = null, passioErr = null, vehiclesFeed = null;
+
+  // Group CTA feeds by stop_id for batching (one request per physical stop)
+  const ctaBatches = new Map(); // stop_id → [{feed, idx, stop}]
+  for (const item of allFeeds) {
+    if (item.feed.source !== 'cta') continue;
+    const sid = item.feed.stop_id;
+    if (!ctaBatches.has(sid)) ctaBatches.set(sid, []);
+    ctaBatches.get(sid).push(item);
+  }
+
+  // Kick off all requests concurrently
+  const ctaResults = new Map(); // stop_id → preds[] | Error
+
+  const promises = [];
+
+  if (hasPassio) {
+    promises.push(
+      Promise.all([
+        fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
+        needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
+      ]).then(([pf, vf]) => { passioFeed = pf; vehiclesFeed = vf; lastPassio = pf; })
+    );
+  }
+
+  for (const [stopId, items] of ctaBatches) {
+    const routes = items.map(i => i.feed.route);
+    promises.push(
+      fetchCTABatch(stopId, routes)
+        .then(preds => ctaResults.set(stopId, preds))
+        .catch(e    => ctaResults.set(stopId, e))
+    );
+  }
+
+  await Promise.all(promises);
+
+  // Populate rows
+  for (const { stop, feed, idx } of allFeeds) {
     try {
-      if (entry.source === 'passio') {
+      if (feed.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
-        const raw = getPassioArrivals(passioFeed, entry.route_id, entry.stop_id);
-        setRowArrivals(i, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, entry)
-                                       : raw.map(a => ({ m: a.m, approx: null })));
-      } else if (entry.source === 'cta') {
-        const mins = await fetchCTA(entry.stop_id, entry.route);
-        setRowArrivals(i, mins.map(m => ({ m, approx: null })));
+        const raw = getPassioArrivals(passioFeed, feed.route_id, feed.stop_id);
+        setRowArrivals(idx, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, stop)
+                                         : raw.map(a => ({ m: a.m, approx: null })));
+      } else if (feed.source === 'cta') {
+        const result = ctaResults.get(feed.stop_id);
+        if (result instanceof Error) throw result;
+        const preds = result || [];
+        const mins = preds
+          .filter(p => p.rt === feed.route)
+          .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
+          .filter(m => !isNaN(m))
+          .slice(0, 3);
+        setRowArrivals(idx, mins.map(m => ({ m, approx: null })));
       }
     } catch (e) {
-      setRowErr(i, e.message);
+      setRowErr(idx, e.message);
     }
-  }));
+  }
 
   updateDebug(tab, passioFeed);
   scheduleNext();
@@ -678,6 +713,15 @@ function scheduleNext() {
   }, 1000);
   rfTimer = setTimeout(doRefresh, 30_000);
 }
+
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    clearTimeout(rfTimer);
+    clearInterval(cdTimer);
+  } else {
+    doRefresh();
+  }
+});
 
 // ── CTA Spot check ────────────────────────────────────────────────────────────
 async function doSpot() {

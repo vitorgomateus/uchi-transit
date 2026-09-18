@@ -35,24 +35,15 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
   "tabs": [
     {
       "label": "Tab Name",
-      "entries": [
+      "stops": [
         {
-          "source": "passio",
-          "route_id": "ROUTE_ID",
-          "stop_id": "STOP_ID",
-          "route_label": "Route Name",
-          "stop_name": "Stop Name",
-          "stop_lat": 41.7886,
-          "stop_lon": -87.5987,
-          "group": "optional-shared-key"
-        },
-        {
-          "source": "cta",
-          "route": "ROUTE_NUMBER",
-          "direction": "Northbound",
-          "stop_id": "STOP_ID",
-          "stop_label": "Stop Name",
-          "group": "optional-shared-key"
+          "label": "Stop Name",
+          "lat": 41.7886,
+          "lon": -87.5987,
+          "feeds": [
+            { "source": "passio", "route_id": "ROUTE_ID", "stop_id": "STOP_ID", "route_label": "Route Name" },
+            { "source": "cta", "route": "ROUTE_NUMBER", "stop_id": "STOP_ID", "direction": "Northbound" }
+          ]
         }
       ]
     },
@@ -66,12 +57,16 @@ Shows UGo shuttle ETAs and CTA bus arrivals. Config is pasted in from a private 
 
 Optional fields:
 - `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `allorigins.win` if omitted.
-- `stop_lat` / `stop_lon` — enables vehicle-position ETA for Passio entries. When present, a haversine estimate `[N]` appears beside arrivals ≤ 12 min, showing whether the vehicle is closer or further than the scheduled time suggests.
-- `group` — shared string key that collapses multiple entries (even across sources) into one stop card. Useful when a CTA and Passio stop are at the same physical location.
+- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
+- Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
 
 Tab types:
-- Default (omit `type`): list of `entries`, each a Passio or CTA stop
+- Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
 - `"type": "cta-spot"`: ad-hoc stop number lookup widget
+
+## Wishlist
+
+- **Intersection stop lookup** — enter a cross-street (e.g. "State and Monroe") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance.
 
 ## Deployment
 
