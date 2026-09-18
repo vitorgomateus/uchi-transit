@@ -286,11 +286,12 @@ const FeedMessage = protobuf.Root.fromJSON({
 }).lookupType('transit_realtime.FeedMessage');
 
 // ── State ─────────────────────────────────────────────────────────────────────
-let cfg          = null;
-let activeTab    = 0;
-let cdTimer      = null;
-let rfTimer      = null;
-let lastPassio = null;
+let cfg              = null;
+let activeTab        = 0;
+let cdTimer          = null;
+let rfTimer          = null;
+let lastPassio       = null;
+let _pendingSpotSave = null;
 
 // ── Config management ─────────────────────────────────────────────────────────
 function applyConfig() {
@@ -637,6 +638,11 @@ function saveSpot(id, label) {
   document.querySelector('.spot-save-btn')?.remove();
 }
 
+function commitSpotSave() {
+  if (_pendingSpotSave) saveSpot(_pendingSpotSave.id, _pendingSpotSave.label);
+  _pendingSpotSave = null;
+}
+
 function removeSpot(id) {
   const spots = getSavedSpots().filter(s => s.id !== id);
   localStorage.setItem('transit_spots', JSON.stringify(spots));
@@ -649,8 +655,8 @@ function renderSavedSpots() {
   const spots = getSavedSpots();
   wrap.innerHTML = spots.map(s =>
     `<span class="spot-fav-wrap">` +
-    `<button class="spot-fav" onclick="loadSpot(${JSON.stringify(s.id)})">${s.label}</button>` +
-    `<button class="spot-fav-rm" onclick="removeSpot(${JSON.stringify(s.id)})" aria-label="Remove ${s.label}">×</button>` +
+    `<button class="spot-fav" onclick="loadSpot('${s.id}')">${s.label}</button>` +
+    `<button class="spot-fav-rm" onclick="removeSpot('${s.id}')" aria-label="Remove ${s.label}">×</button>` +
     `</span>`
   ).join('');
 }
@@ -841,9 +847,10 @@ async function doSpot() {
     const saved    = getSavedSpots();
     const isSaved  = saved.some(s => s.id === inp);
     const atCap    = saved.length >= 6;
+    _pendingSpotSave = isSaved || atCap ? null : { id: inp, label: stopName };
     const saveHtml = isSaved  ? ''
       : atCap ? '<p class="card-status" style="font-size:13px;padding:0 0 8px">Favorites full (6) — remove one to add more.</p>'
-      : `<button class="spot-save-btn" onclick="saveSpot(${JSON.stringify(inp)}, ${JSON.stringify(stopName)})">☆ Save "${stopName}"</button>`;
+      : `<button class="spot-save-btn" onclick="commitSpotSave()">☆ Save "${stopName}"</button>`;
 
     const byRoute = {};
     for (const p of preds) {
