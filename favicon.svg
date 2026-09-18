@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background -->
+  <rect width="32" height="32" rx="7" fill="#0d0d0f"/>
+
+  <!-- Bus body -->
+  <rect x="3" y="7" width="26" height="15" rx="3" fill="#0a84ff"/>
+
+  <!-- Windshield (front-right) -->
+  <rect x="22.5" y="9.5" width="4" height="6" rx="1.5" fill="#c5e4ff" opacity="0.75"/>
+
+  <!-- Passenger windows -->
+  <rect x="5"  y="9.5" width="5" height="6" rx="1.5" fill="#e8f5ff"/>
+  <rect x="13" y="9.5" width="5" height="6" rx="1.5" fill="#e8f5ff"/>
+
+  <!-- Bottom stripe / skirt -->
+  <rect x="3" y="19" width="26" height="3" rx="0" fill="#0060cc"/>
+  <rect x="3" y="21" width="26" height="1" rx="0" fill="#0050aa"/>
+
+  <!-- Wheels -->
+  <circle cx="9"  cy="24" r="4" fill="#111"/>
+  <circle cx="9"  cy="24" r="2" fill="#2c2c2e"/>
+  <circle cx="9"  cy="24" r="0.8" fill="#555"/>
+  <circle cx="23" cy="24" r="4" fill="#111"/>
+  <circle cx="23" cy="24" r="2" fill="#2c2c2e"/>
+  <circle cx="23" cy="24" r="0.8" fill="#555"/>
+
+  <!-- Headlight -->
+  <rect x="26.5" y="17.5" width="2.5" height="2" rx="1" fill="#ffd60a"/>
+
+  <!-- Door line -->
+  <line x1="19.5" y1="9.5" x2="19.5" y2="22" stroke="#0060cc" stroke-width="1"/>
+</svg>
