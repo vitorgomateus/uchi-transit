@@ -9,6 +9,7 @@
   <title>Transit</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
+  <link rel="manifest" href="manifest.json">
   <script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -70,17 +71,24 @@
     #hdr-right { display: flex; align-items: center; gap: 10px; }
     #refresh-cd { font-size: 13px; color: #636366; min-width: 28px; text-align: right; }
 
-    #refresh-btn {
-      background: none; border: none; color: #0a84ff; cursor: pointer;
-      font-size: 15px; font-weight: 500; padding: 4px 6px; border-radius: 4px;
-    }
-    #refresh-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
-
     #cfg-link {
-      background: none; border: none; color: #636366; cursor: pointer;
-      font-size: 13px; padding: 4px 0; border-radius: 4px;
+      background: none; border: none; color: #8e8e93; cursor: pointer;
+      padding: 6px; border-radius: 8px; display: flex; align-items: center;
     }
-    #cfg-link:focus-visible { outline: 2px solid #636366; outline-offset: 2px; }
+    #cfg-link svg { width: 18px; height: 18px; fill: currentColor; }
+    #cfg-link:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+
+    #refresh-fab {
+      position: fixed; bottom: 24px; right: 20px; z-index: 100;
+      width: 54px; height: 54px; border-radius: 50%;
+      background: #0a84ff; border: none; cursor: pointer; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+    }
+    #refresh-fab svg { width: 22px; height: 22px; fill: currentColor; }
+    #refresh-fab:focus-visible { outline: 2px solid #0a84ff; outline-offset: 4px; }
+    #refresh-fab:active { opacity: 0.85; transform: scale(0.95); transition: transform 0.1s; }
+
 
     /* Tabs */
     #tabs { display: flex; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; }
@@ -151,15 +159,15 @@
     /* Debug block */
     details.debug-block { margin-top: 4px; }
     details.debug-block > summary {
-      font-size: 12px; color: #3a3a3c; cursor: pointer; padding: 6px 0;
+      font-size: 13px; color: #8e8e93; cursor: pointer; padding: 6px 0;
       user-select: none; list-style: none;
     }
     details.debug-block > summary::-webkit-details-marker { display: none; }
     details.debug-block > summary:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 2px; }
     details.debug-block pre {
-      background: #0d0d0d; border: 0.5px solid #2c2c2e; border-radius: 8px;
-      padding: 10px 12px; font-family: 'Menlo', 'Monaco', monospace; font-size: 10px;
-      color: #636366; overflow-x: auto; margin-top: 4px;
+      background: #0d0d0d; border: 0.5px solid #3a3a3c; border-radius: 8px;
+      padding: 10px 12px; font-family: 'Menlo', 'Monaco', monospace; font-size: 12px;
+      color: #aeaeb2; overflow-x: auto; margin-top: 4px;
       white-space: pre; max-height: 400px; overflow-y: auto;
     }
 
@@ -192,7 +200,7 @@
 
     #debug-sections > details { margin-top: 4px; }
     #debug-sections > details > summary {
-      font-size: 11px; color: #48484a; cursor: pointer; padding: 4px 0;
+      font-size: 12px; color: #8e8e93; cursor: pointer; padding: 4px 0;
       user-select: none; list-style: none;
     }
     #debug-sections > details > summary::-webkit-details-marker { display: none; }
@@ -218,13 +226,17 @@
       <h1 id="hdr-title">Transit</h1>
       <div id="hdr-right">
         <span id="refresh-cd" aria-hidden="true"></span>
-        <button id="refresh-btn" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">↻ Refresh</button>
-        <button id="cfg-link" onclick="showCfgScreen()" aria-label="Open configuration" title="Open configuration">Config</button>
+        <button id="cfg-link" onclick="showCfgScreen()" aria-label="Open configuration" title="Open configuration">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M195.1 9.5C198.1-5.3 211.2-16 226.4-16l59.8 0c15.2 0 28.3 10.7 31.3 25.5L332 79.5c14.1 6 27.3 13.7 39.3 22.8l67.8-22.5c14.4-4.8 30.2 1.2 37.8 14.4l29.9 51.8c7.6 13.2 4.9 29.8-6.5 39.9L447 233.3c.9 7.4 1.3 15 1.3 22.7s-.5 15.3-1.3 22.7l53.4 47.5c11.4 10.1 14 26.8 6.5 39.9l-29.9 51.8c-7.6 13.1-23.4 19.2-37.8 14.4l-67.8-22.5c-12.1 9.1-25.3 16.7-39.3 22.8l-14.4 69.9c-3.1 14.9-16.2 25.5-31.3 25.5l-59.8 0c-15.2 0-28.3-10.7-31.3-25.5l-14.4-69.9c-14.1-6-27.2-13.7-39.3-22.8L73.5 432.3c-14.4 4.8-30.2-1.2-37.8-14.4L5.8 366.1c-7.6-13.2-4.9-29.8 6.5-39.9l53.4-47.5c-.9-7.4-1.3-15-1.3-22.7s.5-15.3 1.3-22.7L12.3 185.8c-11.4-10.1-14-26.8-6.5-39.9L35.7 94.1c7.6-13.2 23.4-19.2 37.8-14.4l67.8 22.5c12.1-9.1 25.3-16.7 39.3-22.8L195.1 9.5zM256.3 336a80 80 0 1 0 -.6-160 80 80 0 1 0 .6 160z"/></svg>
+        </button>
       </div>
     </div>
     <nav id="tabs" aria-label="Transit tabs"></nav>
   </header>
   <main id="content"></main>
+  <button id="refresh-fab" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
+  </button>
 </div>
 
 <script>
@@ -426,7 +438,7 @@ function renderContent() {
   const dbk = document.createElement('details');
   dbk.className = 'debug-block';
   dbk.id = 'debug-block';
-  dbk.innerHTML = '<summary>Debug</summary><div id="debug-sections"><p style="font-size:11px;color:#48484a;padding:4px 0">(waiting for refresh)</p></div>';
+  dbk.innerHTML = '<summary>Debug</summary><div id="debug-sections"><p style="font-size:12px;color:#8e8e93;padding:4px 0">(waiting for refresh)</p></div>';
   el.appendChild(dbk);
 }
 
@@ -755,7 +767,7 @@ async function doRefresh() {
   const promises = [];
 
   const dbSec = document.getElementById('debug-sections');
-  if (dbSec) dbSec.innerHTML = '<p style="font-size:11px;color:#48484a;padding:4px 0">Refreshing…</p>';
+  if (dbSec) dbSec.innerHTML = '<p style="font-size:12px;color:#8e8e93;padding:4px 0">Refreshing…</p>';
 
   if (hasPassio) {
     promises.push(
@@ -877,6 +889,7 @@ async function doSpot() {
     res.innerHTML = `<p class="card-err">${e.message}</p>`;
   }
 }
+
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 try {
