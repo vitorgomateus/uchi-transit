@@ -84,6 +84,7 @@ Tab types:
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
 - **PWA / offline** — service worker caches the last good arrival data so the app shows something useful instead of errors when offline.
 - **CTA Train Tracker** — L train ETAs via the CTA Train Tracker API (same proxy, different endpoint); same stop/feed schema would accommodate it cleanly.
+- **Basic Placeholder** - so that anyone visiting the site can see something. 
 
 ## Deployment
 
