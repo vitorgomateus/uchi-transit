@@ -56,14 +56,14 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
           "lat": 41.7886,
           "lon": -87.5987,
           "feeds": [
-            { "source": "passio", "route_id": "ROUTE_ID", "stop_id": "STOP_ID", "route_label": "Route Name" },
+            { "source": "passio", "route": "ROUTE_ID", "stop_id": "STOP_ID", "route_label": "Route Name" },
             { "source": "cta", "route": "ROUTE_NUMBER", "stop_id": "STOP_ID", "direction": "Northbound" }
           ]
         }
       ]
     },
     {
-      "label": "CTA Spot",
+      "label": "CTA Stop",
       "type": "cta-spot"
     }
   ]
@@ -114,7 +114,7 @@ Tab types:
           "label": "Roosevelt Station",
           "feeds": [
             { "source": "cta",    "route": "192",  "stop_id": "2376",   "direction": "Southbound" },
-            { "source": "passio", "route_id": "5704", "stop_id": "132968", "route_label": "Downtown Campus Connector" }
+            { "source": "passio", "route": "5704", "stop_id": "132968", "route_label": "Downtown Campus Connector" }
           ]
         }
       ]
@@ -139,13 +139,13 @@ Tab types:
         {
           "label": "55th & University",
           "feeds": [
-            { "source": "passio", "route_id": "5704", "stop_id": "140009", "route_label": "Downtown Campus Connector" }
+            { "source": "passio", "route": "5704", "stop_id": "140009", "route_label": "Downtown Campus Connector" }
           ]
         }
       ]
     },
     {
-      "label": "CTA Spot",
+      "label": "CTA Stop",
       "type": "cta-spot"
     }
   ]
@@ -154,11 +154,7 @@ Tab types:
 
 ## Issues
 
-- CTA spot lookup up should not be named "Spot". It was probably a typo introduced somehwere.
-- **Manifest PWA load time** — app installed through the manifest is slow to load; investigate whether caching or preloading strategies could help. Might not be just the installed version but the website as well.
-- **Route 192 ETAs missing** — route 192 shows no ETAs and the Passio vehicle debug panel is empty; investigate why the GTFS-RT feed is not returning trips for this route despite stop coords being present.
-- **Passio vehicle debug empty** — vehicle debug panel appears empty even when stop coordinates are set; the haversine estimate logic may not be matching vehicle positions to the right stops.
-- The timer showing the refresh should be next to or on the refresh button.
+- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed by adding `top=10` to all batch prediction requests.
 
 ## Wishlist
 
@@ -166,7 +162,7 @@ Tab types:
 - **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
 - **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
-- **CTA Spot refresh** — the stop search tab does not re-fetch on repeated requests; tapping Search again produces a fresh pull, but pressing the refresh button should also do it.
+- **CTA Stop refresh** — the stop search tab does not re-fetch on repeated requests; tapping Search again produces a fresh pull, but pressing the refresh button should also do it.
 - **Placeholder / example config** — add a link to the GitHub README (and the example config above) in the config dialog, so first-time users know what to paste, and pre-load the config dialog with the exmaple config.
 - **Metra Electric** — explore including Metra Electric District train ETAs.
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.

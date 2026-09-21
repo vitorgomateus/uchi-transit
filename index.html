@@ -10,7 +10,7 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
-  <script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -69,8 +69,6 @@
     #hdr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     #hdr-title { font-size: 20px; font-weight: 700; }
     #hdr-right { display: flex; align-items: center; gap: 10px; }
-    #refresh-cd { font-size: 13px; color: #636366; min-width: 28px; text-align: right; }
-
     #cfg-link {
       background: none; border: none; color: #8e8e93; cursor: pointer;
       padding: 6px; border-radius: 8px; display: flex; align-items: center;
@@ -78,8 +76,13 @@
     #cfg-link svg { width: 18px; height: 18px; fill: currentColor; }
     #cfg-link:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 
-    #refresh-fab {
+    #refresh-wrap {
       position: fixed; bottom: 24px; right: 20px; z-index: 100;
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    #refresh-cd { font-size: 11px; color: #8e8e93; min-width: 28px; text-align: center; }
+
+    #refresh-fab {
       width: 54px; height: 54px; border-radius: 50%;
       background: #0a84ff; border: none; cursor: pointer; color: #fff;
       display: flex; align-items: center; justify-content: center;
@@ -225,7 +228,6 @@
     <div id="hdr-top">
       <h1 id="hdr-title">Transit</h1>
       <div id="hdr-right">
-        <span id="refresh-cd" aria-hidden="true"></span>
         <button id="cfg-link" onclick="showCfgScreen()" aria-label="Open configuration" title="Open configuration">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M195.1 9.5C198.1-5.3 211.2-16 226.4-16l59.8 0c15.2 0 28.3 10.7 31.3 25.5L332 79.5c14.1 6 27.3 13.7 39.3 22.8l67.8-22.5c14.4-4.8 30.2 1.2 37.8 14.4l29.9 51.8c7.6 13.2 4.9 29.8-6.5 39.9L447 233.3c.9 7.4 1.3 15 1.3 22.7s-.5 15.3-1.3 22.7l53.4 47.5c11.4 10.1 14 26.8 6.5 39.9l-29.9 51.8c-7.6 13.1-23.4 19.2-37.8 14.4l-67.8-22.5c-12.1 9.1-25.3 16.7-39.3 22.8l-14.4 69.9c-3.1 14.9-16.2 25.5-31.3 25.5l-59.8 0c-15.2 0-28.3-10.7-31.3-25.5l-14.4-69.9c-14.1-6-27.2-13.7-39.3-22.8L73.5 432.3c-14.4 4.8-30.2-1.2-37.8-14.4L5.8 366.1c-7.6-13.2-4.9-29.8 6.5-39.9l53.4-47.5c-.9-7.4-1.3-15-1.3-22.7s.5-15.3 1.3-22.7L12.3 185.8c-11.4-10.1-14-26.8-6.5-39.9L35.7 94.1c7.6-13.2 23.4-19.2 37.8-14.4l67.8 22.5c12.1-9.1 25.3-16.7 39.3-22.8L195.1 9.5zM256.3 336a80 80 0 1 0 -.6-160 80 80 0 1 0 .6 160z"/></svg>
         </button>
@@ -234,11 +236,15 @@
     <nav id="tabs" aria-label="Transit tabs"></nav>
   </header>
   <main id="content"></main>
-  <button id="refresh-fab" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
-  </button>
+  <div id="refresh-wrap">
+    <span id="refresh-cd" aria-hidden="true"></span>
+    <button id="refresh-fab" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
+    </button>
+  </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
 <script>
 // ── Protobuf: GTFS-RT (TripUpdates + VehiclePositions) ───────────────────────
 const FeedMessage = protobuf.Root.fromJSON({
@@ -548,23 +554,33 @@ function haversineKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-function getVehiclePos(vehiclesFeed, tripId) {
-  if (!vehiclesFeed || !tripId) return null;
+function getVehiclePos(vehiclesFeed, tripId, routeId, stopLat, stopLon) {
+  if (!vehiclesFeed) return null;
+  // Exact tripId match
   for (const ent of (vehiclesFeed.entity || [])) {
     const vp = ent.vehicle;
-    if (vp?.trip?.tripId === tripId && vp.position) {
+    if (tripId && vp?.trip?.tripId === tripId && vp.position) {
       return { lat: vp.position.latitude, lon: vp.position.longitude };
     }
   }
-  return null;
+  // Fallback: nearest vehicle on same route (handles feeds where tripId is absent)
+  if (!routeId || stopLat == null || stopLon == null) return null;
+  let best = null, bestKm = Infinity;
+  for (const ent of (vehiclesFeed.entity || [])) {
+    const vp = ent.vehicle;
+    if (String(vp?.trip?.routeId) !== String(routeId) || !vp.position) continue;
+    const km = haversineKm(vp.position.latitude, vp.position.longitude, stopLat, stopLon);
+    if (km < bestKm) { bestKm = km; best = { lat: vp.position.latitude, lon: vp.position.longitude }; }
+  }
+  return best;
 }
 
 // Returns [{m, approx}] — approx is null when no position data available
-function addApproxEtas(arrivals, vehiclesFeed, stop) {
+function addApproxEtas(arrivals, vehiclesFeed, stop, routeId) {
   const hasCoords = stop.lat != null && stop.lon != null;
   return arrivals.map(a => {
     if (!hasCoords || a.m > 12) return { m: a.m, approx: null };
-    const pos = getVehiclePos(vehiclesFeed, a.tripId);
+    const pos = getVehiclePos(vehiclesFeed, a.tripId, routeId, stop.lat, stop.lon);
     if (!pos) return { m: a.m, approx: null };
     const km = haversineKm(pos.lat, pos.lon, stop.lat, stop.lon);
     return { m: a.m, approx: Math.round(km / 18.5 * 60) };
@@ -587,7 +603,7 @@ function buildPassioDebug(feed, tab) {
   if (!feed) return null;
   const now      = Math.floor(Date.now() / 1000);
   const allFeeds = (tab.stops || []).flatMap(s => s.feeds || []);
-  const routeIds = new Set(allFeeds.filter(f => f.source === 'passio').map(f => String(f.route_id)));
+  const routeIds = new Set(allFeeds.filter(f => f.source === 'passio').map(f => String(f.route)));
   const entities = (feed.entity || []).filter(ent => {
     const rid = ent.tripUpdate?.trip?.routeId;
     return !rid || routeIds.has(rid);
@@ -611,15 +627,18 @@ function buildPassioDebug(feed, tab) {
 
 function buildVehicleDebug(feed) {
   if (!feed) return null;
+  const vehicles = (feed.entity || []).map(ent => ({
+    trip_id:  ent.vehicle?.trip?.tripId,
+    route_id: ent.vehicle?.trip?.routeId,
+    lat:      ent.vehicle?.position?.latitude,
+    lon:      ent.vehicle?.position?.longitude,
+    bearing:  ent.vehicle?.position?.bearing,
+  }));
   return {
-    fetched_at:    new Date().toISOString(),
-    vehicle_count: (feed.entity || []).length,
-    vehicles: (feed.entity || []).map(ent => ({
-      trip_id: ent.vehicle?.trip?.tripId,
-      lat:     ent.vehicle?.position?.latitude,
-      lon:     ent.vehicle?.position?.longitude,
-      bearing: ent.vehicle?.position?.bearing,
-    })).filter(v => v.lat != null),
+    fetched_at:     new Date().toISOString(),
+    total_entities: vehicles.length,
+    with_position:  vehicles.filter(v => v.lat != null).length,
+    vehicles,
   };
 }
 
@@ -684,12 +703,13 @@ const ctaProxy   = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw'
 // API messages meaning "no vehicles right now" — collapse the card, not a red error
 const CTA_NO_SVC = new Set(['No service scheduled', 'No arrival times', 'No actual times']);
 
-async function fetchCTABatch(stopId, routes) {
+async function fetchCTABatch(stopIds, routes) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
     throw new Error('No CTA API key — add one to your config');
   }
 
-  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), format: 'json' });
+  const stops  = Array.isArray(stopIds) ? stopIds : [stopIds];
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: stops.join(','), top: String(stops.length * 15), format: 'json' });
   if (routes.length) params.set('rt', routes.join(','));
 
   const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
@@ -752,17 +772,12 @@ async function doRefresh() {
   const needsVehicles = hasPassio && stops.some(s => s.lat != null);
   let passioFeed = null, passioErr = null, vehiclesFeed = null;
 
-  // Group CTA feeds by stop_id for batching (one request per physical stop)
-  const ctaBatches = new Map(); // stop_id → [{feed, idx, stop}]
-  for (const item of allFeeds) {
-    if (item.feed.source !== 'cta') continue;
-    const sid = item.feed.stop_id;
-    if (!ctaBatches.has(sid)) ctaBatches.set(sid, []);
-    ctaBatches.get(sid).push(item);
-  }
-
-  // Kick off all requests concurrently
-  const ctaResults = new Map(); // stop_id → preds[] | Error
+  // One CTA request for all CTA feeds in the tab
+  const ctaItems   = allFeeds.filter(f => f.feed.source === 'cta');
+  const ctaStopIds = [...new Set(ctaItems.map(i => i.feed.stop_id))];
+  const ctaRoutes  = [...new Set(ctaItems.map(i => i.feed.route))];
+  let ctaAllPreds  = [];
+  let ctaFetchErr  = null;
 
   const promises = [];
 
@@ -782,12 +797,11 @@ async function doRefresh() {
     );
   }
 
-  for (const [stopId, items] of ctaBatches) {
-    const routes = items.map(i => i.feed.route);
+  if (ctaItems.length) {
     promises.push(
-      fetchCTABatch(stopId, routes)
-        .then(preds => { ctaResults.set(stopId, preds); appendDebug(`CTA stop ${stopId} (${routes.join(', ')})`, preds); })
-        .catch(e    => { ctaResults.set(stopId, e);     appendDebug(`CTA stop ${stopId} (${routes.join(', ')})`, e); })
+      fetchCTABatch(ctaStopIds, ctaRoutes)
+        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')})`, preds); })
+        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')})`, e); })
     );
   }
 
@@ -798,15 +812,13 @@ async function doRefresh() {
     try {
       if (feed.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
-        const raw = getPassioArrivals(passioFeed, feed.route_id, feed.stop_id);
-        setRowArrivals(idx, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, stop)
+        const raw = getPassioArrivals(passioFeed, feed.route, feed.stop_id);
+        setRowArrivals(idx, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, stop, feed.route)
                                          : raw.map(a => ({ m: a.m, approx: null })));
       } else if (feed.source === 'cta') {
-        const result = ctaResults.get(feed.stop_id);
-        if (result instanceof Error) throw result;
-        const preds = result || [];
-        const mins = preds
-          .filter(p => p.rt === feed.route)
+        if (ctaFetchErr) throw ctaFetchErr;
+        const mins = ctaAllPreds
+          .filter(p => String(p.stpid) === String(feed.stop_id) && p.rt === feed.route)
           .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
           .filter(m => !isNaN(m))
           .slice(0, 3);
