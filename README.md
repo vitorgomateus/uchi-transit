@@ -11,10 +11,12 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 ## Architecture
 
-- **Single file:** `index.html` — no build step, no dependencies beyond a CDN protobufjs script
-- **Config:** JSON pasted into the app on first visit → stored in localStorage
+- **Single file:** `index.html` — no build step, one CDN dependency: `https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js` (pinned to major v7; the app fails entirely if the CDN is unreachable)
+- **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
+- **localStorage keys:** `transit_cfg` (full config), `transit_spot` (last CTA Spot input), `transit_spots` (saved spots list, JSON array)
+- **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
 
 ## Principles
 - Must be efficient and fast.
@@ -26,7 +28,8 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 ## Data sources
 
 ### UGo (Passio) — CORS allowed, no API key needed
-- Feed: `https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates`
+- Trip updates: `https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates`
+- Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured
 - Format: binary protobuf (GTFS-RT), decoded with protobufjs from CDN
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser**
@@ -68,8 +71,9 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 ```
 
 Optional fields:
-- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `allorigins.win` if omitted.
+- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `https://api.allorigins.win/raw` if omitted.
 - `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
+- `group` on a stop — stops sharing the same group string collapse into one card. Useful when a single physical location has different stop IDs across transit systems (e.g. the CTA and Passio stops at Roosevelt Station).
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
 - `spot_favorites` on the `cta-spot` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
 
@@ -88,6 +92,66 @@ Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
 - `"type": "cta-spot"`: ad-hoc stop number lookup widget
 
+### Placeholder / example config
+
+```json
+{
+  "passio_system_id": 1068,
+  "cta_api_key": "YOUR_CTA_KEY",
+  "cta_proxy_url": "https://your-worker.workers.dev",
+  "tabs": [
+    {
+      "label": "To Work",
+      "stops": [
+        {
+          "label": "Michigan & 16th",
+          "feeds": [
+            { "source": "cta", "route": "4",  "stop_id": "1591", "direction": "Southbound" },
+            { "source": "cta", "route": "X4", "stop_id": "1591", "direction": "Southbound" }
+          ]
+        },
+        {
+          "label": "Roosevelt Station",
+          "feeds": [
+            { "source": "cta",    "route": "192",  "stop_id": "2376",   "direction": "Southbound" },
+            { "source": "passio", "route_id": "5704", "stop_id": "132968", "route_label": "Downtown Campus Connector" }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "From Work",
+      "stops": [
+        {
+          "label": "Cottage Grove & 55th",
+          "feeds": [
+            { "source": "cta", "route": "4",  "stop_id": "15148", "direction": "Northbound" },
+            { "source": "cta", "route": "X4", "stop_id": "15148", "direction": "Northbound" }
+          ]
+        },
+        {
+          "label": "Cottage Grove & 57th",
+          "feeds": [
+            { "source": "cta", "route": "4",   "stop_id": "15164", "direction": "Northbound" },
+            { "source": "cta", "route": "192", "stop_id": "15164", "direction": "Northbound" }
+          ]
+        },
+        {
+          "label": "55th & University",
+          "feeds": [
+            { "source": "passio", "route_id": "5704", "stop_id": "140009", "route_label": "Downtown Campus Connector" }
+          ]
+        }
+      ]
+    },
+    {
+      "label": "CTA Spot",
+      "type": "cta-spot"
+    }
+  ]
+}
+```
+
 ## Issues
 
 - CTA spot lookup up should not be named "Spot". It was probably a typo introduced somehwere.
@@ -103,7 +167,7 @@ Tab types:
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
 - **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
 - **CTA Spot refresh** — the stop search tab does not re-fetch on repeated requests; tapping Search again produces a fresh pull, but pressing the refresh button should also do it.
-- **Placeholder / example config** — ship a minimal placeholder `config.json` (with a "To Work" tab, a "From Work" tab, and the CTA Spot tab) and a link to the GitHub README in the config dialog, so first-time users know what to paste. "To work" will have stop 1591 with line 4 and x4; and aggregated stop 2376 with line 192 and passio stop 132968 with the line "Downtown Campus Connector". "From work" will have stop 15148 with lines 4 and X4, and stop 15164 with lines 4 and 192, and passio stop 140009 with the line "Downtown Campus Connector".
+- **Placeholder / example config** — add a link to the GitHub README (and the example config above) in the config dialog, so first-time users know what to paste, and pre-load the config dialog with the exmaple config.
 - **Metra Electric** — explore including Metra Electric District train ETAs.
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.
 - **Show IDs next to names** — display stop IDs and vehicle IDs next to their labels and ETAs to aid debugging and config authoring.
