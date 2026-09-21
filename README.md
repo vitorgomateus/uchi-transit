@@ -154,10 +154,11 @@ Tab types:
 
 ## Issues
 
-- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed by adding `top=10` to all batch prediction requests.
+- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed by adding `top=10` to all batch prediction requests. Needs to be tested.
 
 ## Wishlist
 
+- Pulling down to refresh should refresh feeds and not whole page. Maybe the current tab needs to be remembered for about 30 mins and auto loaded?
 - **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
 - **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
