@@ -15,7 +15,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
-- **localStorage keys:** `transit_cfg` (full config), `transit_spot` (last CTA Spot input), `transit_spots` (saved spots list, JSON array)
+- **localStorage keys:** `transit_cfg` (full config), `transit_stop` (last CTA Stop input), `transit_stops` (saved stops list, JSON array)
 - **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
 
 ## Principles
@@ -64,7 +64,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
     },
     {
       "label": "CTA Stop",
-      "type": "cta-spot"
+      "type": "cta-stop"
     }
   ]
 }
@@ -75,12 +75,12 @@ Optional fields:
 - `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
 - `group` on a stop — stops sharing the same group string collapse into one card. Useful when a single physical location has different stop IDs across transit systems (e.g. the CTA and Passio stops at Roosevelt Station).
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
-- `spot_favorites` on the `cta-spot` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
+- `spot_favorites` on the `cta-stop` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
 
 ```json
 {
-  "label": "CTA Spot",
-  "type": "cta-spot",
+  "label": "CTA Stop",
+  "type": "cta-stop",
   "spot_favorites": [
     { "id": "2376", "label": "State & Roosevelt" },
     { "id": "14760", "label": "Michigan & 16th NB" }
@@ -90,7 +90,7 @@ Optional fields:
 
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
-- `"type": "cta-spot"`: ad-hoc stop number lookup widget
+- `"type": "cta-stop"`: ad-hoc stop number lookup widget
 
 ### Placeholder / example config
 
@@ -146,7 +146,7 @@ Tab types:
     },
     {
       "label": "CTA Stop",
-      "type": "cta-spot"
+      "type": "cta-stop"
     }
   ]
 }
@@ -154,7 +154,7 @@ Tab types:
 
 ## Issues
 
-- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed by adding `top=10` to all batch prediction requests. Needs to be tested.
+- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top = stopCount × 15`; the CTA Stop tab uses `top=10`.
 
 ## Wishlist
 

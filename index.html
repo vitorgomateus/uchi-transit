@@ -173,32 +173,32 @@
       white-space: pre; max-height: 400px; overflow-y: auto;
     }
 
-    /* CTA Spot */
-    #spot-wrap { display: flex; flex-direction: column; gap: 12px; }
-    #spot-row  { display: flex; gap: 8px; }
+    /* CTA Stop */
+    #stop-wrap { display: flex; flex-direction: column; gap: 12px; }
+    #stop-row  { display: flex; gap: 8px; }
 
-    #spot-inp {
+    #stop-inp {
       flex: 1; background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 10px;
       color: #fff; font-size: 17px; padding: 10px 14px;
     }
-    #spot-inp:focus { outline: none; border-color: #0a84ff; }
+    #stop-inp:focus { outline: none; border-color: #0a84ff; }
 
-    #spot-go {
+    #stop-go {
       background: #0a84ff; border: none; border-radius: 10px;
       color: #fff; cursor: pointer; font-size: 17px; font-weight: 600;
       padding: 10px 18px;
     }
-    #spot-go:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
-    #spot-go:active { opacity: 0.8; }
+    #stop-go:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+    #stop-go:active { opacity: 0.8; }
 
-    #spot-results { display: flex; flex-direction: column; gap: 10px; }
+    #stop-results { display: flex; flex-direction: column; gap: 10px; }
 
-    #spot-saved { display: flex; flex-wrap: wrap; gap: 8px; }
-    .spot-fav-wrap { display: inline-flex; align-items: center; background: #2c2c2e; border-radius: 20px; overflow: hidden; }
-    .spot-fav { background: none; border: none; color: #fff; cursor: pointer; font-size: 13px; padding: 6px 12px; }
-    .spot-fav:active { opacity: 0.7; }
-    .spot-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
-    .spot-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
+    #stop-saved { display: flex; flex-wrap: wrap; gap: 8px; }
+    .stop-fav-wrap { display: inline-flex; align-items: center; background: #2c2c2e; border-radius: 20px; overflow: hidden; }
+    .stop-fav { background: none; border: none; color: #fff; cursor: pointer; font-size: 13px; padding: 6px 12px; }
+    .stop-fav:active { opacity: 0.7; }
+    .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
+    .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
 
     #debug-sections > details { margin-top: 4px; }
     #debug-sections > details > summary {
@@ -309,7 +309,7 @@ let activeTab        = 0;
 let cdTimer          = null;
 let rfTimer          = null;
 let lastPassio       = null;
-let _pendingSpotSave = null;
+let _pendingStopSave = null;
 
 // ── Config management ─────────────────────────────────────────────────────────
 function applyConfig() {
@@ -348,7 +348,14 @@ function showCfgScreen() {
 function startApp() {
   document.getElementById('cfg').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
-  syncSpotFavorites();
+  // Migrate renamed localStorage keys (one-time)
+  if (!localStorage.getItem('transit_stop') && localStorage.getItem('transit_spot'))
+    localStorage.setItem('transit_stop', localStorage.getItem('transit_spot'));
+  localStorage.removeItem('transit_spot');
+  if (!localStorage.getItem('transit_stops') && localStorage.getItem('transit_spots'))
+    localStorage.setItem('transit_stops', localStorage.getItem('transit_spots'));
+  localStorage.removeItem('transit_spots');
+  syncStopFavorites();
   buildTabs();
   switchTab(0);
 }
@@ -388,21 +395,21 @@ function renderContent() {
   const tab = cfg.tabs[activeTab];
   if (!tab) return;
 
-  if (tab.type === 'cta-spot') {
-    const last = localStorage.getItem('transit_spot') || '';
+  if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
+    const last = localStorage.getItem('transit_stop') || '';
     el.innerHTML = `
-      <div id="spot-wrap">
-        <div id="spot-row">
-          <label for="spot-inp" class="visually-hidden">CTA stop number</label>
-          <input id="spot-inp" type="text" inputmode="numeric"
+      <div id="stop-wrap">
+        <div id="stop-row">
+          <label for="stop-inp" class="visually-hidden">CTA stop number</label>
+          <input id="stop-inp" type="text" inputmode="numeric"
             placeholder="CTA stop number" value="${last}"
-            onkeydown="if(event.key==='Enter')doSpot()">
-          <button id="spot-go" onclick="doSpot()">Go</button>
+            onkeydown="if(event.key==='Enter')doStop()">
+          <button id="stop-go" onclick="doStop()">Go</button>
         </div>
-        <div id="spot-saved" aria-label="Saved stops"></div>
-        <div id="spot-results" aria-live="polite"></div>
+        <div id="stop-saved" aria-label="Saved stops"></div>
+        <div id="stop-results" aria-live="polite"></div>
       </div>`;
-    renderSavedSpots();
+    renderSavedStops();
     return;
   }
 
@@ -642,59 +649,59 @@ function buildVehicleDebug(feed) {
   };
 }
 
-// ── CTA Spot saved stops ──────────────────────────────────────────────────────
-function getSavedSpots() {
-  try { return JSON.parse(localStorage.getItem('transit_spots') || '[]'); }
+// ── CTA Stop saved stops ──────────────────────────────────────────────────────
+function getSavedStops() {
+  try { return JSON.parse(localStorage.getItem('transit_stops') || '[]'); }
   catch { return []; }
 }
 
-function syncSpotFavorites() {
-  const tab  = cfg?.tabs?.find(t => t.type === 'cta-spot');
+function syncStopFavorites() {
+  const tab  = cfg?.tabs?.find(t => t.type === 'cta-spot' || t.type === 'cta-stop');
   const favs = tab?.spot_favorites;
   if (!favs?.length) return;
-  const existing   = getSavedSpots();
+  const existing   = getSavedStops();
   const existingIds = new Set(existing.map(s => s.id));
   const merged = [
     ...favs.filter(s => s.id && !existingIds.has(s.id)),
     ...existing,
   ].slice(0, 6);
-  localStorage.setItem('transit_spots', JSON.stringify(merged));
+  localStorage.setItem('transit_stops', JSON.stringify(merged));
 }
 
-function saveSpot(id, label) {
-  const spots = getSavedSpots().filter(s => s.id !== id);
-  spots.unshift({ id, label });
-  localStorage.setItem('transit_spots', JSON.stringify(spots.slice(0, 6)));
-  renderSavedSpots();
-  document.querySelector('.spot-save-btn')?.remove();
+function saveStop(id, label) {
+  const stops = getSavedStops().filter(s => s.id !== id);
+  stops.unshift({ id, label });
+  localStorage.setItem('transit_stops', JSON.stringify(stops.slice(0, 6)));
+  renderSavedStops();
+  document.querySelector('.stop-save-btn')?.remove();
 }
 
-function commitSpotSave() {
-  if (_pendingSpotSave) saveSpot(_pendingSpotSave.id, _pendingSpotSave.label);
-  _pendingSpotSave = null;
+function commitStopSave() {
+  if (_pendingStopSave) saveStop(_pendingStopSave.id, _pendingStopSave.label);
+  _pendingStopSave = null;
 }
 
-function removeSpot(id) {
-  const spots = getSavedSpots().filter(s => s.id !== id);
-  localStorage.setItem('transit_spots', JSON.stringify(spots));
-  renderSavedSpots();
+function removeStop(id) {
+  const stops = getSavedStops().filter(s => s.id !== id);
+  localStorage.setItem('transit_stops', JSON.stringify(stops));
+  renderSavedStops();
 }
 
-function renderSavedSpots() {
-  const wrap = document.getElementById('spot-saved');
+function renderSavedStops() {
+  const wrap = document.getElementById('stop-saved');
   if (!wrap) return;
-  const spots = getSavedSpots();
-  wrap.innerHTML = spots.map(s =>
-    `<span class="spot-fav-wrap">` +
-    `<button class="spot-fav" onclick="loadSpot('${s.id}')">${s.label}</button>` +
-    `<button class="spot-fav-rm" onclick="removeSpot('${s.id}')" aria-label="Remove ${s.label}">×</button>` +
+  const stops = getSavedStops();
+  wrap.innerHTML = stops.map(s =>
+    `<span class="stop-fav-wrap">` +
+    `<button class="stop-fav" onclick="loadStop('${s.id}')">${s.label}</button>` +
+    `<button class="stop-fav-rm" onclick="removeStop('${s.id}')" aria-label="Remove ${s.label}">×</button>` +
     `</span>`
   ).join('');
 }
 
-function loadSpot(id) {
-  const inp = document.getElementById('spot-inp');
-  if (inp) { inp.value = id; doSpot(); }
+function loadStop(id) {
+  const inp = document.getElementById('stop-inp');
+  if (inp) { inp.value = id; doStop(); }
 }
 
 // ── CTA via CORS proxy ────────────────────────────────────────────────────────
@@ -733,7 +740,7 @@ async function fetchCTARaw(stopId) {
     throw new Error('No CTA API key — add one to your config');
   }
 
-  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), format: 'json' });
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), top: '10', format: 'json' });
   const res    = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
@@ -754,7 +761,12 @@ async function doRefresh() {
   const tab = cfg?.tabs[activeTab];
   if (!tab) return;
 
-  if (tab.type === 'cta-spot') { scheduleNext(); return; }
+  if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
+    const inp = document.getElementById('stop-inp');
+    if (inp?.value.trim()) doStop();
+    scheduleNext();
+    return;
+  }
 
   const stops = tab.stops || [];
   if (!stops.length) { scheduleNext(); return; }
@@ -851,13 +863,13 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 
-// ── CTA Spot check ────────────────────────────────────────────────────────────
-async function doSpot() {
-  const inp = document.getElementById('spot-inp').value.trim();
-  const res = document.getElementById('spot-results');
+// ── CTA Stop check ────────────────────────────────────────────────────────────
+async function doStop() {
+  const inp = document.getElementById('stop-inp').value.trim();
+  const res = document.getElementById('stop-results');
   if (!inp) return;
 
-  localStorage.setItem('transit_spot', inp);
+  localStorage.setItem('transit_stop', inp);
   res.innerHTML = '<p class="card-status">Loading…</p>';
 
   try {
@@ -867,14 +879,15 @@ async function doSpot() {
       return;
     }
 
-    const stopName = preds[0]?.stpnm || `Stop ${inp}`;
-    const saved    = getSavedSpots();
-    const isSaved  = saved.some(s => s.id === inp);
-    const atCap    = saved.length >= 6;
-    _pendingSpotSave = isSaved || atCap ? null : { id: inp, label: stopName };
+    const stopName     = preds[0]?.stpnm || `Stop ${inp}`;
+    const safeStopName = stopName.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+    const saved        = getSavedStops();
+    const isSaved      = saved.some(s => s.id === inp);
+    const atCap        = saved.length >= 6;
+    _pendingStopSave = isSaved || atCap ? null : { id: inp, label: stopName };
     const saveHtml = isSaved  ? ''
       : atCap ? '<p class="card-status" style="font-size:13px;padding:0 0 8px">Favorites full (6) — remove one to add more.</p>'
-      : `<button class="spot-save-btn" onclick="commitSpotSave()">☆ Save "${stopName}"</button>`;
+      : `<button class="stop-save-btn" onclick="commitStopSave()">☆ Save "${safeStopName}"</button>`;
 
     const byRoute = {};
     for (const p of preds) {
