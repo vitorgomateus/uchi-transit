@@ -10,7 +10,6 @@
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
   <link rel="apple-touch-icon" href="favicon.svg">
   <link rel="manifest" href="manifest.json">
-  <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -244,7 +243,7 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js"></script>
+<script src="protobuf.min.js"></script>
 <script>
 // ── Protobuf: GTFS-RT (TripUpdates + VehiclePositions) ───────────────────────
 const FeedMessage = protobuf.Root.fromJSON({

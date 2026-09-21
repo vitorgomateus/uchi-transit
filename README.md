@@ -11,7 +11,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 ## Architecture
 
-- **Single file:** `index.html` — no build step, one CDN dependency: `https://cdn.jsdelivr.net/npm/protobufjs@7/dist/protobuf.min.js` (pinned to major v7; the app fails entirely if the CDN is unreachable)
+- **Single file:** `index.html` — no build step; `protobuf.min.js` (protobufjs v7, vendored) is the only dependency and is served from the same origin
 - **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
