@@ -785,9 +785,12 @@ async function doRefresh() {
   let passioFeed = null, passioErr = null, vehiclesFeed = null;
 
   // One CTA request for all CTA feeds in the tab
-  const ctaItems   = allFeeds.filter(f => f.feed.source === 'cta');
-  const ctaStopIds = [...new Set(ctaItems.map(i => i.feed.stop_id))];
-  const ctaRoutes  = [...new Set(ctaItems.map(i => i.feed.route))];
+  const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
+  const ctaStopIds    = [...new Set(ctaItems.map(i => i.feed.stop_id))];
+  const ctaRoutes     = [...new Set(ctaItems.map(i => i.feed.route))];
+  const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
+  const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
+  const passioStopIds = [...new Set(passioItems.map(i => i.feed.stop_id))];
   let ctaAllPreds  = [];
   let ctaFetchErr  = null;
 
@@ -803,8 +806,8 @@ async function doRefresh() {
         needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
       ]).then(([pf, vf]) => {
         passioFeed = pf; vehiclesFeed = vf; lastPassio = pf;
-        appendDebug('Passio TripUpdates', passioErr ? new Error(passioErr) : buildPassioDebug(pf, tab));
-        if (needsVehicles) appendDebug('Passio VehiclePositions', buildVehicleDebug(vf));
+        appendDebug(`Passio TripUpdates (route ${passioRoutes.join(', ')}) — stops ${passioStopIds.join(', ')}`, passioErr ? new Error(passioErr) : buildPassioDebug(pf, tab));
+        if (needsVehicles) appendDebug(`Passio VehiclePositions (route ${passioRoutes.join(', ')})`, buildVehicleDebug(vf));
       })
     );
   }
@@ -812,8 +815,8 @@ async function doRefresh() {
   if (ctaItems.length) {
     promises.push(
       fetchCTABatch(ctaStopIds, ctaRoutes)
-        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')})`, preds); })
-        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')})`, e); })
+        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, preds); })
+        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, e); })
     );
   }
 

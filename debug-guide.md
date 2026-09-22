@@ -4,9 +4,9 @@ The **Debug** section at the bottom of each tab expands into one collapsible blo
 
 ---
 
-## Passio TripUpdates
+## Passio TripUpdates (route …) — stops …
 
-Passio's GTFS-RT trip-update feed, filtered down to the routes in the current tab.
+Passio's GTFS-RT trip-update feed, filtered down to the routes in the current tab. The label shows the route ID(s) and stop IDs being tracked, e.g. `Passio TripUpdates (route 5704) — stops 132968, 140009`.
 
 ```json
 {
@@ -50,7 +50,7 @@ Passio's GTFS-RT trip-update feed, filtered down to the routes in the current ta
 
 ---
 
-## Passio VehiclePositions
+## Passio VehiclePositions (route …)
 
 Live GPS positions for all vehicles on the feed, used to compute the bracketed `[N]` position-based ETA shown alongside scheduled times.
 
@@ -80,9 +80,9 @@ Live GPS positions for all vehicles on the feed, used to compute the bracketed `
 
 ---
 
-## CTA predictions
+## CTA (…) — stops …
 
-The raw prediction objects returned by the CTA Bus Tracker API, one entry per predicted arrival across all routes in the tab.
+The raw prediction objects returned by the CTA Bus Tracker API, one entry per predicted arrival across all routes in the tab. The label shows which routes and stop IDs were requested, e.g. `CTA (192, 4, X4) — stops 2376, 1595`.
 
 ```json
 [

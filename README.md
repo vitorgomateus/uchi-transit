@@ -17,6 +17,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
 - **localStorage keys:** `transit_cfg` (full config), `transit_stop` (last CTA Stop input), `transit_stops` (saved stops list, JSON array)
 - **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
+- **Debug panel:** each tab has a collapsible Debug section at the bottom showing the raw parsed feed data for the last refresh — useful for verifying stop IDs and diagnosing missing arrivals. See [debug-guide.md](debug-guide.md) for annotated examples.
 
 ## Principles
 - Must be efficient and fast.
