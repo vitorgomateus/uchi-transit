@@ -358,7 +358,12 @@ function startApp() {
   localStorage.removeItem('transit_spots');
   syncStopFavorites();
   buildTabs();
-  switchTab(0);
+  let initTab = 0;
+  try {
+    const s = JSON.parse(localStorage.getItem('transit_tab') || 'null');
+    if (s && Date.now() - s.t < 30 * 60 * 1000 && s.i < cfg.tabs.length) initTab = s.i;
+  } catch {}
+  switchTab(initTab);
 }
 
 // ── Tabs ──────────────────────────────────────────────────────────────────────
@@ -382,6 +387,7 @@ function switchTab(i) {
   clearInterval(cdTimer);
   document.getElementById('refresh-cd').textContent = '';
   activeTab = i;
+  localStorage.setItem('transit_tab', JSON.stringify({ i, t: Date.now() }));
   document.querySelectorAll('.tab').forEach((b, j) => {
     b.classList.toggle('on', j === i);
     b.setAttribute('aria-selected', j === i ? 'true' : 'false');
@@ -717,7 +723,7 @@ async function fetchCTABatch(stopIds, routes) {
   }
 
   const stops  = Array.isArray(stopIds) ? stopIds : [stopIds];
-  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: stops.join(','), top: String(stops.length * 15), format: 'json' });
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: stops.join(','), top: String(routes.length * 10), format: 'json' });
   if (routes.length) params.set('rt', routes.join(','));
 
   const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));

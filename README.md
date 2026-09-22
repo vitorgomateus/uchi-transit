@@ -15,7 +15,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
-- **localStorage keys:** `transit_cfg` (full config), `transit_stop` (last CTA Stop input), `transit_stops` (saved stops list, JSON array)
+- **localStorage keys:** `transit_cfg` (full config), `transit_stop` (last CTA Stop input), `transit_stops` (saved stops list, JSON array), `transit_tab` (last active tab index + timestamp, restored on load if < 30 min old)
 - **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
 - **Debug panel:** each tab has a collapsible Debug section at the bottom showing the raw parsed feed data for the last refresh — useful for verifying stop IDs and diagnosing missing arrivals. See [debug-guide.md](debug-guide.md) for annotated examples.
 
@@ -159,11 +159,11 @@ Tab types:
 
 ## Issues
 
-- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top = stopCount × 15`; the CTA Stop tab uses `top=10`.
+- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top = routeCount × 10` (routes compete for prediction slots, not stop IDs); the CTA Stop tab uses `top=10`.
 
 ## Wishlist
 
-- Pulling down to refresh should refresh feeds and not whole page. Maybe the current tab needs to be remembered for about 30 mins and auto loaded?
+- **Pull-to-refresh reloads the whole page** — native mobile pull-to-refresh triggers a full page reload. The active tab is now persisted to localStorage and restored on load if it's less than 30 minutes old, so the reload is transparent. Intercepting the pull gesture itself to avoid the reload entirely is not yet implemented.
 - **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
 - **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
