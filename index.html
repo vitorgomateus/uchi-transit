@@ -158,7 +158,6 @@
     .card-status { font-size: 14px; color: #636366; }
     .card-err    { font-size: 13px; color: #ff453a; }
     .no-arr      { font-size: 13px; color: #3a3a3c; }
-    .id-lbl      { font-size: 10px; color: #3a3a3c; font-family: 'Menlo', 'Monaco', monospace; white-space: nowrap; }
 
     /* Debug block */
     details.debug-block { margin-top: 4px; }
@@ -465,11 +464,9 @@ function renderContent() {
     for (const feed of (stop.feeds || [])) {
       const routeLbl = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
       const rowDesc  = routeLbl + (feed.direction ? ', ' + feed.direction : '');
-      const stopIdDisplay = feed.loop_last_stop ? `lp:${feed.loop_last_stop}` : `s:${feed.stop_id}`;
       html += '<div class="route-row">';
       if (routeLbl)       html += `<span class="route-lbl">${routeLbl}</span>`;
       if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
-      html += `<span class="id-lbl" aria-hidden="true">rt:${feed.route}·${stopIdDisplay}</span>`;
       html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}" data-lbl="${rowDesc}" aria-live="polite" aria-label="${rowDesc}: loading"><span class="card-status" aria-hidden="true">…</span></div>`;
       html += '</div>';
       feedIdx++;
@@ -508,12 +505,11 @@ function setRowArrivals(i, arrivals) {
   const summary = arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
   el.setAttribute('aria-label', prefix + summary);
 
-  el.innerHTML = arrivals.map(({ m, approx, loop, vid }) => {
-    const vidHtml = vid != null ? `<span class="eta" aria-hidden="true">·${vid}</span>` : '';
-    if (m <= 0) return `<span class="chip due" aria-hidden="true">Due${vidHtml}</span>`;
+  el.innerHTML = arrivals.map(({ m, approx, loop }) => {
+    if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
     const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
     const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
-    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}${vidHtml}</span>`;
+    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
   }).join('');
 
   maybeCollapseGroup(el);
@@ -550,7 +546,17 @@ async function fetchPassioFeed() {
 async function fetchPassioVehicles() {
   const res = await fetch('https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions');
   if (!res.ok) throw new Error('Vehicles HTTP ' + res.status);
-  return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
+  const ct = res.headers.get('Content-Type') || '';
+  if (ct.includes('text') || ct.includes('json') || ct.includes('html')) {
+    const body = await res.text();
+    throw new Error(`Vehicles: unexpected content type "${ct}" — ${body.slice(0, 300)}`);
+  }
+  const buf = new Uint8Array(await res.arrayBuffer());
+  try {
+    return FeedMessage.decode(buf);
+  } catch (e) {
+    throw new Error(`Vehicles protobuf decode failed (${buf.length} bytes, Content-Type: "${ct}"): ${e.message}`);
+  }
 }
 
 function longToSecs(val) {
@@ -616,25 +622,15 @@ function getVehiclePos(vehiclesFeed, tripId, routeId, stopLat, stopLon) {
   return best;
 }
 
-function getVehicleLabel(vehiclesFeed, tripId) {
-  if (!vehiclesFeed || !tripId) return null;
-  for (const ent of (vehiclesFeed.entity || [])) {
-    const vp = ent.vehicle;
-    if (vp?.trip?.tripId === tripId) return vp.vehicle?.label || vp.vehicle?.id || null;
-  }
-  return null;
-}
-
-// Returns [{m, approx, vid}] — approx is null when no position data available
+// Returns [{m, approx}] — approx is null when no position data available
 function addApproxEtas(arrivals, vehiclesFeed, stop, routeId) {
   const hasCoords = stop.lat != null && stop.lon != null;
   return arrivals.map(a => {
-    const vid = getVehicleLabel(vehiclesFeed, a.tripId);
-    if (!hasCoords || a.m > 12) return { m: a.m, approx: null, loop: a.loop, vid };
+    if (!hasCoords || a.m > 12) return { m: a.m, approx: null, loop: a.loop };
     const pos = getVehiclePos(vehiclesFeed, a.tripId, routeId, stop.lat, stop.lon);
-    if (!pos) return { m: a.m, approx: null, loop: a.loop, vid };
+    if (!pos) return { m: a.m, approx: null, loop: a.loop };
     const km = haversineKm(pos.lat, pos.lon, stop.lat, stop.lon);
-    return { m: a.m, approx: Math.round(km / 18.5 * 60), loop: a.loop, vid };
+    return { m: a.m, approx: Math.round(km / 18.5 * 60), loop: a.loop };
   });
 }
 
@@ -921,15 +917,15 @@ async function doRefresh() {
               .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0), loop: true }))
           : getPassioArrivals(passioFeed, feed.route, feed.stop_id);
         setRowArrivals(idx, vehiclesFeed ? addApproxEtas(arrivals, vehiclesFeed, stop, feed.route)
-                                         : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop, vid: null })));
+                                         : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop })));
       } else if (feed.source === 'cta') {
         if (ctaFetchErr) throw ctaFetchErr;
-        const ctaPreds = ctaAllPreds
+        const mins = ctaAllPreds
           .filter(p => String(p.stpid) === String(feed.stop_id) && p.rt === feed.route)
-          .map(p => ({ m: p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10), vid: p.vid || null }))
-          .filter(({ m }) => !isNaN(m))
+          .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
+          .filter(m => !isNaN(m))
           .slice(0, 3);
-        setRowArrivals(idx, ctaPreds.map(({ m, vid }) => ({ m, approx: null, vid })));
+        setRowArrivals(idx, mins.map(m => ({ m, approx: null })));
       }
     } catch (e) {
       setRowErr(idx, e.message);
@@ -992,13 +988,11 @@ async function doStop() {
       if (!isNaN(m)) byRoute[p.rt].arrivals.push({ m, vid: p.vid || null });
     }
 
-    const stopHdr = `<p class="id-lbl" style="margin-bottom:8px">stop:<strong>${inp}</strong> — ${safeStopName}</p>`;
-    res.innerHTML = stopHdr + saveHtml + Object.values(byRoute).map(r => {
-      const chips = r.arrivals.slice(0, 3).map(({ m, vid }) => {
-        const vidHtml = vid ? `<span class="eta" aria-hidden="true">·v${vid}</span>` : '';
-        if (m <= 0) return `<span class="chip due" aria-hidden="true">Due${vidHtml}</span>`;
-        if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}${vidHtml}</span>`;
-        return `<span class="chip" aria-hidden="true">${m}${vidHtml}</span>`;
+    res.innerHTML = saveHtml + Object.values(byRoute).map(r => {
+      const chips = r.arrivals.slice(0, 3).map(({ m }) => {
+        if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
+        if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}</span>`;
+        return `<span class="chip" aria-hidden="true">${m}</span>`;
       }).join('');
       return `<div class="stop-card">
         <div class="stop-name">Route ${r.rt} — ${r.des}</div>
