@@ -664,7 +664,7 @@ function getSavedStops() {
 
 function syncStopFavorites() {
   const tab  = cfg?.tabs?.find(t => t.type === 'cta-spot' || t.type === 'cta-stop');
-  const favs = tab?.spot_favorites;
+  const favs = tab?.stop_favorites ?? tab?.spot_favorites;
   if (!favs?.length) return;
   const existing   = getSavedStops();
   const existingIds = new Set(existing.map(s => s.id));
