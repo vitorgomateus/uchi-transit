@@ -723,7 +723,7 @@ async function fetchCTABatch(stopIds, routes) {
   }
 
   const stops  = Array.isArray(stopIds) ? stopIds : [stopIds];
-  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: stops.join(','), top: String(routes.length * 10), format: 'json' });
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: stops.join(','), top: '50', format: 'json' });
   if (routes.length) params.set('rt', routes.join(','));
 
   const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
@@ -791,15 +791,10 @@ async function doRefresh() {
   const needsVehicles = hasPassio && stops.some(s => s.lat != null);
   let passioFeed = null, passioErr = null, vehiclesFeed = null;
 
-  // CTA requests batched per stop — routes are scoped to each stop so a
-  // frequent route at one stop can't crowd out a rare route at another stop.
+  // One CTA request for all CTA feeds in the tab
   const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
-  const ctaByStop     = new Map();
-  for (const item of ctaItems) {
-    const sid = item.feed.stop_id;
-    if (!ctaByStop.has(sid)) ctaByStop.set(sid, []);
-    ctaByStop.get(sid).push(item.feed.route);
-  }
+  const ctaStopIds    = [...new Set(ctaItems.map(i => i.feed.stop_id))];
+  const ctaRoutes     = [...new Set(ctaItems.map(i => i.feed.route))];
   const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
   const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
   const passioStopIds = [...new Set(passioItems.flatMap(i => [i.feed.stop_id, i.feed.loop_last_stop].filter(Boolean)))];
@@ -826,12 +821,9 @@ async function doRefresh() {
 
   if (ctaItems.length) {
     promises.push(
-      Promise.all([...ctaByStop.entries()].map(([sid, routes]) => {
-        const uniq = [...new Set(routes)];
-        return fetchCTABatch([sid], uniq)
-          .then(preds => { ctaAllPreds.push(...preds); appendDebug(`CTA (${uniq.join(', ')}) — stop ${sid}`, preds); })
-          .catch(e    => { ctaFetchErr = e;             appendDebug(`CTA (${uniq.join(', ')}) — stop ${sid}`, e); });
-      }))
+      fetchCTABatch(ctaStopIds, ctaRoutes)
+        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, preds); })
+        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, e); })
     );
   }
 
