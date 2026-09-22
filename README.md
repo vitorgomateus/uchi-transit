@@ -41,6 +41,8 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - No CORS on the API itself — deploy `worker.js` to Cloudflare Workers (free tier) and set `cta_proxy_url` in config
 - Requires a free API key from ctabustracker.com
 - JSONP is NOT supported by the CTA API (tested)
+- Official developer guide (PDF): [cta_Bus_Tracker_API_Developer_Guide_and_Documentation_20160929.pdf](https://www.transitchicago.com/assets/1/6/cta_Bus_Tracker_API_Developer_Guide_and_Documentation_20160929.pdf)
+- **Unlike Passio's GTFS-RT feed, the CTA API is stop-centric:** `getpredictions` answers "what are the next arrivals at this stop?" directly, regardless of where in a route the vehicle currently is. Passio's GTFS-RT is trip-centric: it returns the remaining future stops for currently-running trips, so a stop that is early in a loop route may show no ETAs if all active vehicles have already passed it.
 
 ## Config JSON format
 
