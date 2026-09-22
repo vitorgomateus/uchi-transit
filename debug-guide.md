@@ -76,7 +76,9 @@ Live GPS positions for all vehicles on the feed, used to compute the bracketed `
 | `bearing` | Heading in degrees (0 = north, 90 = east, 180 = south, 270 = west) |
 | `lat` / `lon` | Current GPS coordinates |
 
-**What to check:** If `with_position` is much lower than `total_entities`, some buses aren't reporting GPS. The bracketed ETA in the UI (`[3]`) is computed from the straight-line distance (Haversine) to your stop's `lat`/`lon` divided by 18.5 km/h — it's an estimate, not a schedule.
+**What to check:** If `with_position` is much lower than `total_entities`, some buses aren't reporting GPS. The bracketed ETA in the UI (`[3]`) is computed from the straight-line distance (Haversine) to your stop's `lat`/`lon` divided by 18.5 km/h — it's an estimate, not a schedule. The vehicle label from this feed is shown inline in each arrival chip (e.g. `5·48` = 5 min, vehicle 48).
+
+If the debug block shows an error object instead of position data, the fetch failed — common causes: CORS rejection by Passio's CDN, non-binary response body (HTML error page), or a protobuf decode error. The trip updates and vehicle positions use the same origin, so a CORS failure on one but not the other usually indicates a missing endpoint or a different CDN rule for that path.
 
 ---
 

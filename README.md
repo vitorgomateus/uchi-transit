@@ -30,7 +30,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 ### UGo (Passio) — CORS allowed, no API key needed
 - Trip updates: `https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates`
-- Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured
+- Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured. If the fetch fails, the debug panel shows the actual error instead of `null`.
 - Format: binary protobuf (GTFS-RT), decoded with protobufjs from CDN
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser.** To look up stop IDs from a terminal: POST `https://passiogo.com/mapGetData.php?getStops=2.73` with body `{"s0":"1068","sA":"1"}`. Unofficial API reference: [passiogo.readthedocs.io](https://passiogo.readthedocs.io/en/main/) and [github.com/athuler/PassioGo](https://github.com/athuler/PassioGo).
@@ -76,7 +76,8 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 Optional fields:
 - `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `https://api.allorigins.win/raw` if omitted.
-- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min.
+- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min. The vehicle ID is also shown (e.g. `5·v48`).
+- `routes` on a `cta-alerts` tab — array of CTA route numbers to filter bulletins. Omit to fetch all active bulletins.
 - `loop_last_stop` + `loop_offset_min` on a Passio feed entry — for stops that are early in a loop route and therefore rarely appear as a future stop in the GTFS-RT feed. Set `loop_last_stop` to the stop ID of the last stop on the loop (the stop reliably present in all active trips), and `loop_offset_min` to the travel time in minutes from that last stop back around to your target stop. The app will query the last stop instead and add the offset. Measure `loop_offset_min` from riding the route. Example: `"loop_last_stop": "8591", "loop_offset_min": 7`.
 - `group` on a stop — stops sharing the same group string collapse into one card. Useful when a single physical location has different stop IDs across transit systems (e.g. the CTA and Passio stops at Roosevelt Station).
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
@@ -96,6 +97,15 @@ Optional fields:
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
 - `"type": "cta-stop"`: ad-hoc stop number lookup widget
+- `"type": "cta-alerts"`: CTA service bulletins from `getservicebulletins`. Optional `routes` array filters to specific routes; omit for all alerts.
+
+```json
+{
+  "label": "Alerts",
+  "type": "cta-alerts",
+  "routes": ["6", "55", "192"]
+}
+```
 
 ### Placeholder / example config
 
@@ -152,6 +162,11 @@ Tab types:
     {
       "label": "CTA Stop",
       "type": "cta-stop"
+    },
+    {
+      "label": "Alerts",
+      "type": "cta-alerts",
+      "routes": ["4", "192", "X4"]
     }
   ]
 }
@@ -161,19 +176,17 @@ Tab types:
 
 - **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
+- **Passio vehicle positions debug showing `null`** — the `fetchPassioVehicles` call was catching errors with `.catch(() => null)`, silently discarding the failure reason. The debug panel then showed `null` instead of any useful diagnostic. Fixed: the error is now captured and surfaced in the debug block.
 
 ## Wishlist
 
 - **Pull-to-refresh reloads the whole page** — native mobile pull-to-refresh triggers a full page reload instead of re-fetching data. The active tab is restored on reload (persisted to localStorage, 30-min window), so position is not lost; intercepting the gesture itself to skip the reload entirely is not yet implemented.
 - **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
-- **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
-- **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
+- **CTA service alerts — icon on affected stop cards** — the `cta-alerts` tab shows active bulletins, but affected stop cards on other tabs do not yet have an inline alert indicator linking to the relevant bulletin.
 - **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
-- **CTA Stop refresh** — the stop search tab does not re-fetch on repeated requests; tapping Search again produces a fresh pull, but pressing the refresh button should also do it.
-- **Placeholder / example config** — add a link to the GitHub README (and the example config above) in the config dialog, so first-time users know what to paste, and pre-load the config dialog with the exmaple config.
+- **Placeholder / example config** — add a link to the GitHub README (and the example config above) in the config dialog, so first-time users know what to paste, and pre-load the config dialog with the example config.
 - **Metra Electric** — explore including Metra Electric District train ETAs.
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.
-- **Show IDs next to names** — display stop IDs and vehicle IDs next to their labels and ETAs to aid debugging and config authoring.
 
 ## Abandoned
 

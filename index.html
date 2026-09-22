@@ -158,6 +158,7 @@
     .card-status { font-size: 14px; color: #636366; }
     .card-err    { font-size: 13px; color: #ff453a; }
     .no-arr      { font-size: 13px; color: #3a3a3c; }
+    .id-lbl      { font-size: 10px; color: #3a3a3c; font-family: 'Menlo', 'Monaco', monospace; white-space: nowrap; }
 
     /* Debug block */
     details.debug-block { margin-top: 4px; }
@@ -234,7 +235,7 @@
         </button>
       </div>
     </div>
-    <nav id="tabs" aria-label="Transit tabs"></nav>
+    <nav id="tabs" role="tablist" aria-label="Transit tabs"></nav>
   </header>
   <main id="content"></main>
   <div id="refresh-wrap">
@@ -376,10 +377,27 @@ function buildTabs() {
     b.setAttribute('role', 'tab');
     b.setAttribute('aria-selected', 'false');
     b.setAttribute('aria-controls', 'content');
+    b.setAttribute('tabindex', '-1');
     b.textContent = t.label;
     b.onclick = () => switchTab(i);
     bar.appendChild(b);
   });
+  bar.addEventListener('keydown', handleTabKeydown);
+}
+
+function handleTabKeydown(e) {
+  const tabs = [...document.querySelectorAll('#tabs .tab')];
+  const cur  = tabs.indexOf(document.activeElement);
+  if (cur === -1) return;
+  let next = cur;
+  if      (e.key === 'ArrowRight') next = (cur + 1) % tabs.length;
+  else if (e.key === 'ArrowLeft')  next = (cur - 1 + tabs.length) % tabs.length;
+  else if (e.key === 'Home')       next = 0;
+  else if (e.key === 'End')        next = tabs.length - 1;
+  else return;
+  e.preventDefault();
+  switchTab(next);
+  tabs[next].focus();
 }
 
 function switchTab(i) {
@@ -391,6 +409,7 @@ function switchTab(i) {
   document.querySelectorAll('.tab').forEach((b, j) => {
     b.classList.toggle('on', j === i);
     b.setAttribute('aria-selected', j === i ? 'true' : 'false');
+    b.setAttribute('tabindex', j === i ? '0' : '-1');
   });
   renderContent();
   doRefresh();
@@ -401,6 +420,11 @@ function renderContent() {
   const el  = document.getElementById('content');
   const tab = cfg.tabs[activeTab];
   if (!tab) return;
+
+  if (tab.type === 'cta-alerts') {
+    el.innerHTML = '<div id="alerts-wrap" aria-live="polite"><p class="card-status">Loading…</p></div>';
+    return;
+  }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
     const last = localStorage.getItem('transit_stop') || '';
@@ -441,9 +465,11 @@ function renderContent() {
     for (const feed of (stop.feeds || [])) {
       const routeLbl = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
       const rowDesc  = routeLbl + (feed.direction ? ', ' + feed.direction : '');
+      const stopIdDisplay = feed.loop_last_stop ? `lp:${feed.loop_last_stop}` : `s:${feed.stop_id}`;
       html += '<div class="route-row">';
       if (routeLbl)       html += `<span class="route-lbl">${routeLbl}</span>`;
       if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
+      html += `<span class="id-lbl" aria-hidden="true">rt:${feed.route}·${stopIdDisplay}</span>`;
       html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}" data-lbl="${rowDesc}" aria-live="polite" aria-label="${rowDesc}: loading"><span class="card-status" aria-hidden="true">…</span></div>`;
       html += '</div>';
       feedIdx++;
@@ -482,11 +508,12 @@ function setRowArrivals(i, arrivals) {
   const summary = arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
   el.setAttribute('aria-label', prefix + summary);
 
-  el.innerHTML = arrivals.map(({ m, approx, loop }) => {
-    if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
+  el.innerHTML = arrivals.map(({ m, approx, loop, vid }) => {
+    const vidHtml = vid != null ? `<span class="eta" aria-hidden="true">·${vid}</span>` : '';
+    if (m <= 0) return `<span class="chip due" aria-hidden="true">Due${vidHtml}</span>`;
     const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
     const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
-    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
+    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}${vidHtml}</span>`;
   }).join('');
 
   maybeCollapseGroup(el);
@@ -589,15 +616,25 @@ function getVehiclePos(vehiclesFeed, tripId, routeId, stopLat, stopLon) {
   return best;
 }
 
-// Returns [{m, approx}] — approx is null when no position data available
+function getVehicleLabel(vehiclesFeed, tripId) {
+  if (!vehiclesFeed || !tripId) return null;
+  for (const ent of (vehiclesFeed.entity || [])) {
+    const vp = ent.vehicle;
+    if (vp?.trip?.tripId === tripId) return vp.vehicle?.label || vp.vehicle?.id || null;
+  }
+  return null;
+}
+
+// Returns [{m, approx, vid}] — approx is null when no position data available
 function addApproxEtas(arrivals, vehiclesFeed, stop, routeId) {
   const hasCoords = stop.lat != null && stop.lon != null;
   return arrivals.map(a => {
-    if (!hasCoords || a.m > 12) return { m: a.m, approx: null, loop: a.loop };
+    const vid = getVehicleLabel(vehiclesFeed, a.tripId);
+    if (!hasCoords || a.m > 12) return { m: a.m, approx: null, loop: a.loop, vid };
     const pos = getVehiclePos(vehiclesFeed, a.tripId, routeId, stop.lat, stop.lon);
-    if (!pos) return { m: a.m, approx: null, loop: a.loop };
+    if (!pos) return { m: a.m, approx: null, loop: a.loop, vid };
     const km = haversineKm(pos.lat, pos.lon, stop.lat, stop.lon);
-    return { m: a.m, approx: Math.round(km / 18.5 * 60), loop: a.loop };
+    return { m: a.m, approx: Math.round(km / 18.5 * 60), loop: a.loop, vid };
   });
 }
 
@@ -759,6 +796,45 @@ async function fetchCTARaw(stopId) {
   return preds;
 }
 
+async function fetchCTAAlerts(routes) {
+  if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
+    throw new Error('No CTA API key — add one to your config');
+  }
+  const CTA_ALERTS = 'https://www.ctabustracker.com/bustime/api/v2/getservicebulletins';
+  const params = new URLSearchParams({ key: cfg.cta_api_key, format: 'json' });
+  if (routes?.length) params.set('rt', routes.join(','));
+  const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_ALERTS}?${params}`));
+  if (!res.ok) throw new Error('CTA alerts HTTP ' + res.status);
+  const data = await res.json();
+  const btr  = data?.['bustime-response'];
+  if (btr?.error?.length && !btr?.sb?.length) throw new Error(btr.error[0]?.msg || 'CTA error');
+  return btr?.sb || [];
+}
+
+async function doAlerts(tab) {
+  const wrap = document.getElementById('alerts-wrap');
+  if (!wrap) return;
+  try {
+    const bulletins = await fetchCTAAlerts(tab.routes || []);
+    if (!bulletins.length) {
+      wrap.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No active service alerts.</p>';
+      return;
+    }
+    wrap.innerHTML = bulletins.map(sb => {
+      const subject = (sb.sbj || sb.nm || 'Service Alert').replace(/</g, '&lt;');
+      const detail  = (sb.dtl || sb.brf || '').replace(/</g, '&lt;');
+      const routes  = (sb.srvc || []).map(s => s.rt?.rtnm || s.rt?.rtid).filter(Boolean).join(', ');
+      return `<div class="stop-card">
+        <div class="stop-name">${subject}</div>
+        ${routes ? `<p class="route-lbl" style="margin-bottom:8px">Routes: ${routes.replace(/</g,'&lt;')}</p>` : ''}
+        ${detail  ? `<p style="font-size:14px;line-height:1.5;color:#aeaeb2">${detail}</p>` : ''}
+      </div>`;
+    }).join('');
+  } catch (e) {
+    wrap.innerHTML = `<p class="card-err">${e.message.replace(/</g, '&lt;')}</p>`;
+  }
+}
+
 // ── Refresh logic ─────────────────────────────────────────────────────────────
 async function doRefresh() {
   clearTimeout(rfTimer);
@@ -767,6 +843,12 @@ async function doRefresh() {
 
   const tab = cfg?.tabs[activeTab];
   if (!tab) return;
+
+  if (tab.type === 'cta-alerts') {
+    await doAlerts(tab);
+    scheduleNext();
+    return;
+  }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
     const inp = document.getElementById('stop-inp');
@@ -789,7 +871,7 @@ async function doRefresh() {
 
   const hasPassio     = allFeeds.some(f => f.feed.source === 'passio');
   const needsVehicles = hasPassio && stops.some(s => s.lat != null);
-  let passioFeed = null, passioErr = null, vehiclesFeed = null;
+  let passioFeed = null, passioErr = null, vehiclesFeed = null, vehiclesErr = null;
 
   // One CTA request for all CTA feeds in the tab
   const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
@@ -810,11 +892,11 @@ async function doRefresh() {
     promises.push(
       Promise.all([
         fetchPassioFeed().catch(e => { passioErr = e.message; return null; }),
-        needsVehicles ? fetchPassioVehicles().catch(() => null) : Promise.resolve(null),
+        needsVehicles ? fetchPassioVehicles().catch(e => { vehiclesErr = e; return null; }) : Promise.resolve(null),
       ]).then(([pf, vf]) => {
         passioFeed = pf; vehiclesFeed = vf; lastPassio = pf;
         appendDebug(`Passio TripUpdates (route ${passioRoutes.join(', ')}) — stops ${passioStopIds.join(', ')}`, passioErr ? new Error(passioErr) : buildPassioDebug(pf, tab));
-        if (needsVehicles) appendDebug(`Passio VehiclePositions (route ${passioRoutes.join(', ')})`, buildVehicleDebug(vf));
+        if (needsVehicles) appendDebug(`Passio VehiclePositions (route ${passioRoutes.join(', ')})`, vehiclesErr ?? buildVehicleDebug(vf));
       })
     );
   }
@@ -839,15 +921,15 @@ async function doRefresh() {
               .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0), loop: true }))
           : getPassioArrivals(passioFeed, feed.route, feed.stop_id);
         setRowArrivals(idx, vehiclesFeed ? addApproxEtas(arrivals, vehiclesFeed, stop, feed.route)
-                                         : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop })));
+                                         : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop, vid: null })));
       } else if (feed.source === 'cta') {
         if (ctaFetchErr) throw ctaFetchErr;
-        const mins = ctaAllPreds
+        const ctaPreds = ctaAllPreds
           .filter(p => String(p.stpid) === String(feed.stop_id) && p.rt === feed.route)
-          .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
-          .filter(m => !isNaN(m))
+          .map(p => ({ m: p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10), vid: p.vid || null }))
+          .filter(({ m }) => !isNaN(m))
           .slice(0, 3);
-        setRowArrivals(idx, mins.map(m => ({ m, approx: null })));
+        setRowArrivals(idx, ctaPreds.map(({ m, vid }) => ({ m, approx: null, vid })));
       }
     } catch (e) {
       setRowErr(idx, e.message);
@@ -905,16 +987,18 @@ async function doStop() {
 
     const byRoute = {};
     for (const p of preds) {
-      if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, mins: [] };
+      if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, arrivals: [] };
       const m = p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10);
-      if (!isNaN(m)) byRoute[p.rt].mins.push(m);
+      if (!isNaN(m)) byRoute[p.rt].arrivals.push({ m, vid: p.vid || null });
     }
 
-    res.innerHTML = saveHtml + Object.values(byRoute).map(r => {
-      const chips = r.mins.slice(0, 3).map(m => {
-        if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
-        if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}</span>`;
-        return `<span class="chip" aria-hidden="true">${m}</span>`;
+    const stopHdr = `<p class="id-lbl" style="margin-bottom:8px">stop:<strong>${inp}</strong> — ${safeStopName}</p>`;
+    res.innerHTML = stopHdr + saveHtml + Object.values(byRoute).map(r => {
+      const chips = r.arrivals.slice(0, 3).map(({ m, vid }) => {
+        const vidHtml = vid ? `<span class="eta" aria-hidden="true">·v${vid}</span>` : '';
+        if (m <= 0) return `<span class="chip due" aria-hidden="true">Due${vidHtml}</span>`;
+        if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}${vidHtml}</span>`;
+        return `<span class="chip" aria-hidden="true">${m}${vidHtml}</span>`;
       }).join('');
       return `<div class="stop-card">
         <div class="stop-name">Route ${r.rt} — ${r.des}</div>
