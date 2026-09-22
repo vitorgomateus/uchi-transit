@@ -33,7 +33,8 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured
 - Format: binary protobuf (GTFS-RT), decoded with protobufjs from CDN
 - UChicago system ID: `1068`
-- **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser**
+- **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser.** To look up stop IDs from a terminal: POST `https://passiogo.com/mapGetData.php?getStops=2.73` with body `{"s0":"1068","sA":"1"}`. Unofficial API reference: [passiogo.readthedocs.io](https://passiogo.readthedocs.io/en/main/) and [github.com/athuler/PassioGo](https://github.com/athuler/PassioGo).
+- **Loop routes and GTFS-RT:** for routes that run as a single loop (one trip per lap), a stop near the start of the loop will only appear as a future stop in a brief window at the beginning of each lap. If a stop reliably shows no ETAs despite active trips on the route, check its position in the loop — a stop at position 4/15 appears far less often than one at position 14/15.
 
 ### CTA Bus Tracker — proxied via Cloudflare Worker
 - API: `https://www.ctabustracker.com/bustime/api/v2/getpredictions`
