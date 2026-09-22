@@ -160,10 +160,11 @@ Tab types:
 ## Issues
 
 - **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
+- **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
 
 ## Wishlist
 
-- **Pull-to-refresh reloads the whole page** — native mobile pull-to-refresh triggers a full page reload. The active tab is now persisted to localStorage and restored on load if it's less than 30 minutes old, so the reload is transparent. Intercepting the pull gesture itself to avoid the reload entirely is not yet implemented.
+- **Pull-to-refresh reloads the whole page** — native mobile pull-to-refresh triggers a full page reload instead of re-fetching data. The active tab is restored on reload (persisted to localStorage, 30-min window), so position is not lost; intercepting the gesture itself to skip the reload entirely is not yet implemented.
 - **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
 - **Keyboard tab navigation** — arrow keys should move between tabs per the ARIA tabs spec.
 - **CTA service alerts** — additional tab pulling from the CTA `getservicebulletins` endpoint; an icon on affected stop cards links to the relevant alert.
