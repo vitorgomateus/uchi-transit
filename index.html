@@ -791,10 +791,15 @@ async function doRefresh() {
   const needsVehicles = hasPassio && stops.some(s => s.lat != null);
   let passioFeed = null, passioErr = null, vehiclesFeed = null;
 
-  // One CTA request for all CTA feeds in the tab
+  // CTA requests batched per stop — routes are scoped to each stop so a
+  // frequent route at one stop can't crowd out a rare route at another stop.
   const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
-  const ctaStopIds    = [...new Set(ctaItems.map(i => i.feed.stop_id))];
-  const ctaRoutes     = [...new Set(ctaItems.map(i => i.feed.route))];
+  const ctaByStop     = new Map();
+  for (const item of ctaItems) {
+    const sid = item.feed.stop_id;
+    if (!ctaByStop.has(sid)) ctaByStop.set(sid, []);
+    ctaByStop.get(sid).push(item.feed.route);
+  }
   const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
   const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
   const passioStopIds = [...new Set(passioItems.flatMap(i => [i.feed.stop_id, i.feed.loop_last_stop].filter(Boolean)))];
@@ -821,9 +826,12 @@ async function doRefresh() {
 
   if (ctaItems.length) {
     promises.push(
-      fetchCTABatch(ctaStopIds, ctaRoutes)
-        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, preds); })
-        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, e); })
+      Promise.all([...ctaByStop.entries()].map(([sid, routes]) => {
+        const uniq = [...new Set(routes)];
+        return fetchCTABatch([sid], uniq)
+          .then(preds => { ctaAllPreds.push(...preds); appendDebug(`CTA (${uniq.join(', ')}) — stop ${sid}`, preds); })
+          .catch(e    => { ctaFetchErr = e;             appendDebug(`CTA (${uniq.join(', ')}) — stop ${sid}`, e); });
+      }))
     );
   }
 
