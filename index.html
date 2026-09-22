@@ -790,7 +790,7 @@ async function doRefresh() {
   const ctaRoutes     = [...new Set(ctaItems.map(i => i.feed.route))];
   const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
   const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
-  const passioStopIds = [...new Set(passioItems.map(i => i.feed.stop_id))];
+  const passioStopIds = [...new Set(passioItems.flatMap(i => [i.feed.stop_id, i.feed.loop_last_stop].filter(Boolean)))];
   let ctaAllPreds  = [];
   let ctaFetchErr  = null;
 
@@ -827,9 +827,12 @@ async function doRefresh() {
     try {
       if (feed.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
-        const raw = getPassioArrivals(passioFeed, feed.route, feed.stop_id);
-        setRowArrivals(idx, vehiclesFeed ? addApproxEtas(raw, vehiclesFeed, stop, feed.route)
-                                         : raw.map(a => ({ m: a.m, approx: null })));
+        const arrivals = feed.loop_last_stop
+          ? getPassioArrivals(passioFeed, feed.route, feed.loop_last_stop)
+              .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0) }))
+          : getPassioArrivals(passioFeed, feed.route, feed.stop_id);
+        setRowArrivals(idx, vehiclesFeed ? addApproxEtas(arrivals, vehiclesFeed, stop, feed.route)
+                                         : arrivals.map(a => ({ m: a.m, approx: null })));
       } else if (feed.source === 'cta') {
         if (ctaFetchErr) throw ctaFetchErr;
         const mins = ctaAllPreds
