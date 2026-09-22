@@ -152,6 +152,7 @@
     }
     .chip.due  { background: rgba(255,214,10,0.15); color: #ffd60a; }
     .chip.soon { color: #30d158; }
+    .chip.loop { border: 1.5px dashed rgba(255,255,255,0.25); }
     .eta { font-size: 11px; font-weight: 400; color: #48484a; }
 
     .card-status { font-size: 14px; color: #636366; }
@@ -475,9 +476,9 @@ function setRowArrivals(i, arrivals) {
   const summary = arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
   el.setAttribute('aria-label', prefix + summary);
 
-  el.innerHTML = arrivals.map(({ m, approx }) => {
+  el.innerHTML = arrivals.map(({ m, approx, loop }) => {
     if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
-    const cls = m <= 5 ? 'chip soon' : 'chip';
+    const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
     const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
     return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
   }).join('');
@@ -586,11 +587,11 @@ function getVehiclePos(vehiclesFeed, tripId, routeId, stopLat, stopLon) {
 function addApproxEtas(arrivals, vehiclesFeed, stop, routeId) {
   const hasCoords = stop.lat != null && stop.lon != null;
   return arrivals.map(a => {
-    if (!hasCoords || a.m > 12) return { m: a.m, approx: null };
+    if (!hasCoords || a.m > 12) return { m: a.m, approx: null, loop: a.loop };
     const pos = getVehiclePos(vehiclesFeed, a.tripId, routeId, stop.lat, stop.lon);
-    if (!pos) return { m: a.m, approx: null };
+    if (!pos) return { m: a.m, approx: null, loop: a.loop };
     const km = haversineKm(pos.lat, pos.lon, stop.lat, stop.lon);
-    return { m: a.m, approx: Math.round(km / 18.5 * 60) };
+    return { m: a.m, approx: Math.round(km / 18.5 * 60), loop: a.loop };
   });
 }
 
@@ -829,10 +830,10 @@ async function doRefresh() {
         if (passioErr) throw new Error(passioErr);
         const arrivals = feed.loop_last_stop
           ? getPassioArrivals(passioFeed, feed.route, feed.loop_last_stop)
-              .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0) }))
+              .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0), loop: true }))
           : getPassioArrivals(passioFeed, feed.route, feed.stop_id);
         setRowArrivals(idx, vehiclesFeed ? addApproxEtas(arrivals, vehiclesFeed, stop, feed.route)
-                                         : arrivals.map(a => ({ m: a.m, approx: null })));
+                                         : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop })));
       } else if (feed.source === 'cta') {
         if (ctaFetchErr) throw ctaFetchErr;
         const mins = ctaAllPreds
