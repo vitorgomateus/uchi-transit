@@ -847,10 +847,11 @@ async function doRefresh() {
 function scheduleNext() {
   let secs = 30;
   const cdEl = document.getElementById('refresh-cd');
-  cdTimer = setInterval(() => {
+  const localTimer = setInterval(() => {
     cdEl.textContent = (--secs) + 's';
-    if (secs <= 0) clearInterval(cdTimer);
+    if (secs <= 0) clearInterval(localTimer);
   }, 1000);
+  cdTimer = localTimer;
   rfTimer = setTimeout(doRefresh, 30_000);
 }
 
