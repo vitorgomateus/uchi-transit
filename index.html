@@ -277,8 +277,9 @@ const FeedMessage = protobuf.Root.fromJSON({
           position: { id:3, type:'Position' }
         }},
         TripDescriptor: { fields: {
-          tripId:  { id:1, type:'string' },
-          routeId: { id:5, type:'string' }
+          tripId:      { id:1, type:'string' },
+          routeId:     { id:5, type:'string' },
+          directionId: { id:6, type:'uint32' }
         }},
         StopTimeUpdate: { fields: {
           stopSequence: { id:1, type:'uint32' },
@@ -312,6 +313,7 @@ let activeTab        = 0;
 let cdTimer          = null;
 let rfTimer          = null;
 let lastPassio       = null;
+let lastMetra        = null;
 let _pendingStopSave = null;
 
 // ── Route icons (inline SVG; files live in img/ for reference) ────────────────
@@ -470,8 +472,10 @@ function renderContent() {
     html += '<div class="route-rows">';
 
     for (const feed of (stop.feeds || [])) {
-      const routeIcon = feed.source === 'passio' ? ICON_SHUTTLE : ICON_BUS;
-      const routeLbl  = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
+      const routeIcon = feed.source === 'passio' ? ICON_SHUTTLE : feed.source === 'metra' ? ICON_TRAM : ICON_BUS;
+      const routeLbl  = feed.source === 'passio' ? (feed.route_label || 'Shuttle')
+                      : feed.source === 'metra'  ? (feed.route_label || 'Metra Electric')
+                      : `Route ${feed.route}`;
       const rowDesc   = routeLbl + (feed.direction ? ', ' + feed.direction : '');
       html += '<div class="route-row">';
       if (routeLbl)       html += `<span class="route-lbl">${routeIcon}&nbsp;${routeLbl}</span>`;
@@ -566,6 +570,75 @@ async function fetchPassioVehicles() {
   } catch (e) {
     throw new Error(`Vehicles protobuf decode failed (${buf.length} bytes, Content-Type: "${ct}"): ${e.message}`);
   }
+}
+
+// ── Metra Electric GTFS-RT ────────────────────────────────────────────────────
+async function fetchMetraFeed() {
+  if (!cfg.metra_api_key || cfg.metra_api_key === 'YOUR_KEY_HERE') {
+    throw new Error('No Metra API key — add metra_api_key to your config');
+  }
+  if (!cfg.cta_proxy_url) {
+    throw new Error('Metra requires a CORS proxy — add cta_proxy_url (worker.js) to your config');
+  }
+  const target = `https://gtfspublic.metrarr.com/gtfs/public/tripupdates?api_token=${encodeURIComponent(cfg.metra_api_key)}`;
+  const res = await fetch(ctaProxy() + encodeURIComponent(target));
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Metra HTTP ${res.status}${body ? ': ' + body.slice(0, 120) : ''}`);
+  }
+  return FeedMessage.decode(new Uint8Array(await res.arrayBuffer()));
+}
+
+// Returns [{m, tripId}] sorted ascending.
+// If destinationStopId is set, only includes trips that still have that stop
+// appearing *after* the target stop — this filters by direction without needing
+// direction_id (e.g. pass "MILLENNIUM" to see only inbound trains).
+function getMetraArrivals(feed, stopId, destinationStopId, max = 3) {
+  const now  = Math.floor(Date.now() / 1000);
+  const sid  = String(stopId);
+  const dst  = destinationStopId ? String(destinationStopId) : null;
+  const results = [];
+
+  for (const ent of (feed.entity || [])) {
+    const tu = ent.tripUpdate;
+    if (!tu) continue;
+    const stus = tu.stopTimeUpdate || [];
+    const targetIdx = stus.findIndex(s => s.stopId === sid);
+    if (targetIdx === -1) continue;
+    if (dst && !stus.slice(targetIdx + 1).some(s => s.stopId === dst)) continue;
+    const stu = stus[targetIdx];
+    const t = longToSecs(stu.arrival?.time) ?? longToSecs(stu.departure?.time);
+    if (t && t > now - 60) {
+      results.push({ m: Math.round((t - now) / 60), tripId: tu.trip?.tripId || ent.id });
+    }
+  }
+
+  return results.sort((a, b) => a.m - b.m).slice(0, max);
+}
+
+function buildMetraDebug(feed, tab) {
+  if (!feed) return null;
+  const now      = Math.floor(Date.now() / 1000);
+  const allFeeds = (tab.stops || []).flatMap(s => s.feeds || []);
+  const stopIds  = new Set(allFeeds.filter(f => f.source === 'metra').map(f => f.stop_id));
+  const entities = (feed.entity || []).filter(ent =>
+    (ent.tripUpdate?.stopTimeUpdate || []).some(s => stopIds.has(s.stopId))
+  );
+  return {
+    feed_timestamp: longToSecs(feed.header?.timestamp),
+    fetched_at:     new Date().toISOString(),
+    matching_trips: entities.length,
+    trips: entities.map(ent => ({
+      trip_id:   ent.tripUpdate?.trip?.tripId,
+      route_id:  ent.tripUpdate?.trip?.routeId,
+      direction: ent.tripUpdate?.trip?.directionId,
+      stops: (ent.tripUpdate?.stopTimeUpdate || []).map(s => ({
+        stop_id: s.stopId,
+        arr_min: s.arrival?.time  ? Math.round((longToSecs(s.arrival.time)  - now) / 60) : null,
+        dep_min: s.departure?.time ? Math.round((longToSecs(s.departure.time) - now) / 60) : null,
+      }))
+    }))
+  };
 }
 
 function longToSecs(val) {
@@ -909,8 +982,10 @@ async function doRefresh() {
   }
 
   const hasPassio     = allFeeds.some(f => f.feed.source === 'passio');
+  const hasMetra      = allFeeds.some(f => f.feed.source === 'metra');
   const needsVehicles = hasPassio && stops.some(s => s.lat != null);
   let passioFeed = null, passioErr = null, vehiclesFeed = null, vehiclesErr = null;
+  let metraFeed  = null, metraErr  = null;
 
   // One CTA request for all CTA feeds in the tab
   const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
@@ -919,6 +994,8 @@ async function doRefresh() {
   const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
   const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
   const passioStopIds = [...new Set(passioItems.flatMap(i => [i.feed.stop_id, i.feed.loop_last_stop].filter(Boolean)))];
+  const metraItems    = allFeeds.filter(f => f.feed.source === 'metra');
+  const metraStopIds  = [...new Set(metraItems.flatMap(i => [i.feed.stop_id, i.feed.destination_stop_id].filter(Boolean)))];
   let ctaAllPreds  = [];
   let ctaFetchErr  = null;
 
@@ -948,6 +1025,14 @@ async function doRefresh() {
     );
   }
 
+  if (hasMetra) {
+    promises.push(
+      fetchMetraFeed()
+        .then(f  => { metraFeed = f; lastMetra = f; appendDebug(`Metra — stops ${metraStopIds.join(', ')}`, buildMetraDebug(f, tab)); })
+        .catch(e => { metraErr = e.message;          appendDebug(`Metra — stops ${metraStopIds.join(', ')}`, e); })
+    );
+  }
+
   await Promise.all(promises);
 
   // Populate rows
@@ -969,6 +1054,10 @@ async function doRefresh() {
           .filter(m => !isNaN(m))
           .slice(0, 3);
         setRowArrivals(idx, mins.map(m => ({ m, approx: null })));
+      } else if (feed.source === 'metra') {
+        if (metraErr) throw new Error(metraErr);
+        const arrivals = getMetraArrivals(metraFeed, feed.stop_id, feed.destination_stop_id);
+        setRowArrivals(idx, arrivals.map(a => ({ m: a.m, approx: null })));
       }
     } catch (e) {
       setRowErr(idx, e.message);

@@ -21,8 +21,9 @@ export default {
       return new Response('Missing ?url= parameter', { status: 400, headers: CORS_HEADERS });
     }
 
-    // Only allow proxying to the CTA Bus Tracker API
-    if (!target.startsWith('https://www.ctabustracker.com/')) {
+    // Only allow proxying to the CTA Bus Tracker API and Metra GTFS-RT API
+    if (!target.startsWith('https://www.ctabustracker.com/') &&
+        !target.startsWith('https://gtfspublic.metrarr.com/')) {
       return new Response('Forbidden', { status: 403, headers: CORS_HEADERS });
     }
 
