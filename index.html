@@ -899,7 +899,7 @@ async function doAlerts(tab) {
   try {
     // Filter out CTA's auto-generated "Check for #X alerts" placeholder notices
     const bulletins = (await fetchCTAAlerts(tab.routes || []))
-      .filter(sb => !/^check for #/i.test(sb.nm || ''));
+      .filter(sb => !/^check for #/i.test(sb.sbj || sb.nm || ''));
     if (!bulletins.length) {
       wrap.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No active service alerts.</p>';
       return;
