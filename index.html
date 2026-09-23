@@ -160,6 +160,7 @@
     .no-arr      { font-size: 13px; color: #3a3a3c; }
     .alert-src   { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
                    background: rgba(10,132,255,0.15); color: #0a84ff; white-space: nowrap; }
+    #alerts-wrap a { color: #0a84ff; }
 
     /* Debug block */
     details.debug-block { margin-top: 4px; }
@@ -889,10 +890,6 @@ async function fetchCTAAlerts(routes) {
   return btr?.sb || [];
 }
 
-function alertDetailText(html) {
-  try { return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim(); }
-  catch { return html.replace(/<[^>]*>/g, '').trim(); }
-}
 
 async function doAlerts(tab) {
   const wrap = document.getElementById('alerts-wrap');
@@ -900,7 +897,14 @@ async function doAlerts(tab) {
   const srcLabel = tab.source_label ?? 'CTA';
   const srcIcon  = tab.source_icon  ?? (srcLabel === 'UGo' ? ICON_SHUTTLE : ICON_BUS);
   try {
-    const bulletins = await fetchCTAAlerts(tab.routes || []);
+    // Deduplicate: same bulletin can appear once per subscribed route
+    const seen = new Set();
+    const bulletins = (await fetchCTAAlerts(tab.routes || [])).filter(sb => {
+      const key = sb.nm + '|' + (sb.sbj || '');
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
     if (!bulletins.length) {
       wrap.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No active service alerts.</p>';
       return;
@@ -932,11 +936,11 @@ async function doAlerts(tab) {
         card.appendChild(p);
       }
 
-      const detail = alertDetailText(sb.dtl || sb.brf || '');
-      if (detail) {
+      const rawDetail = sb.dtl || sb.brf || '';
+      if (rawDetail) {
         const p = document.createElement('p');
         p.style.cssText = 'font-size:14px;line-height:1.5;color:#aeaeb2';
-        p.textContent = detail;
+        p.innerHTML = rawDetail;
         card.appendChild(p);
       }
 
