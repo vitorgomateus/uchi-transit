@@ -76,7 +76,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 Optional fields:
 - `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `https://api.allorigins.win/raw` if omitted.
-- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min. The vehicle ID is also shown (e.g. `5·v48`).
+- `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min. (Currently non-functional — see Issues.)
 - `routes` on a `cta-alerts` tab — array of CTA route numbers to filter bulletins. Omit to fetch all active bulletins.
 - `source_label` on a `cta-alerts` tab — badge label on each alert card. Defaults to `"CTA"`. Set to `"UGo"` (or anything else) for a future Passio alerts tab.
 - `source_icon` on a `cta-alerts` tab — emoji icon shown in the badge. Auto-detected from `source_label` (`"UGo"` → 🚐, otherwise 🚌); override if needed.
@@ -186,13 +186,10 @@ Tab types:
 
 ## Wishlist
 
-- **Pull-to-refresh reloads the whole page** — native mobile pull-to-refresh triggers a full page reload instead of re-fetching data. The active tab is restored on reload (persisted to localStorage, 30-min window), so position is not lost; intercepting the gesture itself to skip the reload entirely is not yet implemented.
-- **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
-- **CTA service alerts — icon on affected stop cards** — the `cta-alerts` tab shows active bulletins, but affected stop cards on other tabs do not yet have an inline alert indicator linking to the relevant bulletin.
-- **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
-- **Placeholder / example config** — add a link to the GitHub README (and the example config above) in the config dialog, so first-time users know what to paste, and pre-load the config dialog with the example config.
 - **Metra Electric** — explore including Metra Electric District train ETAs.
+- **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.
+- **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
 
 ## Abandoned
 
