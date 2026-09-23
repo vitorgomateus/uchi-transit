@@ -158,6 +158,8 @@
     .card-status { font-size: 14px; color: #636366; }
     .card-err    { font-size: 13px; color: #ff453a; }
     .no-arr      { font-size: 13px; color: #3a3a3c; }
+    .alert-src   { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+                   background: rgba(10,132,255,0.15); color: #0a84ff; white-space: nowrap; }
 
     /* Debug block */
     details.debug-block { margin-top: 4px; }
@@ -462,10 +464,11 @@ function renderContent() {
     html += '<div class="route-rows">';
 
     for (const feed of (stop.feeds || [])) {
-      const routeLbl = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
-      const rowDesc  = routeLbl + (feed.direction ? ', ' + feed.direction : '');
+      const routeIcon = feed.source === 'passio' ? '🚐' : '🚌';
+      const routeLbl  = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
+      const rowDesc   = routeLbl + (feed.direction ? ', ' + feed.direction : '');
       html += '<div class="route-row">';
-      if (routeLbl)       html += `<span class="route-lbl">${routeLbl}</span>`;
+      if (routeLbl)       html += `<span class="route-lbl">${routeIcon}&nbsp;${routeLbl}</span>`;
       if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
       html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}" data-lbl="${rowDesc}" aria-live="polite" aria-label="${rowDesc}: loading"><span class="card-status" aria-hidden="true">…</span></div>`;
       html += '</div>';
@@ -807,25 +810,58 @@ async function fetchCTAAlerts(routes) {
   return btr?.sb || [];
 }
 
+function alertDetailText(html) {
+  try { return new DOMParser().parseFromString(html, 'text/html').body.textContent.trim(); }
+  catch { return html.replace(/<[^>]*>/g, '').trim(); }
+}
+
 async function doAlerts(tab) {
   const wrap = document.getElementById('alerts-wrap');
   if (!wrap) return;
+  const srcLabel = tab.source_label ?? 'CTA';
+  const srcIcon  = tab.source_icon  ?? (srcLabel === 'UGo' ? '🚐' : '🚌');
   try {
     const bulletins = await fetchCTAAlerts(tab.routes || []);
     if (!bulletins.length) {
       wrap.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No active service alerts.</p>';
       return;
     }
-    wrap.innerHTML = bulletins.map(sb => {
-      const subject = (sb.sbj || sb.nm || 'Service Alert').replace(/</g, '&lt;');
-      const detail  = (sb.dtl || sb.brf || '').replace(/</g, '&lt;');
-      const routes  = (sb.srvc || []).map(s => s.rt?.rtnm || s.rt?.rtid).filter(Boolean).join(', ');
-      return `<div class="stop-card">
-        <div class="stop-name">${subject}</div>
-        ${routes ? `<p class="route-lbl" style="margin-bottom:8px">Routes: ${routes.replace(/</g,'&lt;')}</p>` : ''}
-        ${detail  ? `<p style="font-size:14px;line-height:1.5;color:#aeaeb2">${detail}</p>` : ''}
-      </div>`;
-    }).join('');
+    wrap.innerHTML = '';
+    for (const sb of bulletins) {
+      const card = document.createElement('div');
+      card.className = 'stop-card';
+
+      const hdr = document.createElement('div');
+      hdr.style.cssText = 'display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap';
+      const nameEl = document.createElement('div');
+      nameEl.className = 'stop-name';
+      nameEl.style.marginBottom = '0';
+      nameEl.textContent = sb.sbj || sb.nm || 'Service Alert';
+      const badge = document.createElement('span');
+      badge.className = 'alert-src';
+      badge.textContent = srcIcon + ' ' + srcLabel;
+      hdr.append(nameEl, badge);
+      card.appendChild(hdr);
+
+      const routes = (sb.srvc || []).map(s => s.rt?.rtnm || s.rt?.rtid).filter(Boolean).join(', ');
+      if (routes) {
+        const p = document.createElement('p');
+        p.className = 'route-lbl';
+        p.style.marginBottom = '8px';
+        p.textContent = 'Routes: ' + routes;
+        card.appendChild(p);
+      }
+
+      const detail = alertDetailText(sb.dtl || sb.brf || '');
+      if (detail) {
+        const p = document.createElement('p');
+        p.style.cssText = 'font-size:14px;line-height:1.5;color:#aeaeb2';
+        p.textContent = detail;
+        card.appendChild(p);
+      }
+
+      wrap.appendChild(card);
+    }
   } catch (e) {
     wrap.innerHTML = `<p class="card-err">${e.message.replace(/</g, '&lt;')}</p>`;
   }
@@ -995,7 +1031,7 @@ async function doStop() {
         return `<span class="chip" aria-hidden="true">${m}</span>`;
       }).join('');
       return `<div class="stop-card">
-        <div class="stop-name">Route ${r.rt} — ${r.des}</div>
+        <div class="stop-name">🚌&nbsp;Route ${r.rt} — ${r.des}</div>
         <div class="route-rows"><div class="route-row">
           <span class="dir-lbl">${r.dir}</span>
           <div class="arrivals">${chips}</div>
