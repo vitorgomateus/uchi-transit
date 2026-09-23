@@ -30,7 +30,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 
 ### UGo (Passio) — CORS allowed, no API key needed
 - Trip updates: `https://passio3.com/chicago/passioTransit/gtfs/realtime/tripUpdates`
-- Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured. If the fetch fails, the debug panel shows the actual error instead of `null`.
+- Vehicle positions: `https://passio3.com/chicago/passioTransit/gtfs/realtime/vehiclePositions` — fetched only when at least one stop has `lat`/`lon` configured. **Currently non-functional:** the endpoint returns 1165 bytes of binary with no `Content-Type` header that fails GTFS-RT protobuf decoding (`index out of range` inside a 74-byte sub-message); the trip updates endpoint works fine. The debug panel surfaces the actual decode error. The `lat`/`lon` config fields and bracketed ETA display are ready for when this is resolved.
 - Format: binary protobuf (GTFS-RT), decoded with protobufjs from CDN
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser.** To look up stop IDs from a terminal: POST `https://passiogo.com/mapGetData.php?getStops=2.73` with body `{"s0":"1068","sA":"1"}`. Unofficial API reference: [passiogo.readthedocs.io](https://passiogo.readthedocs.io/en/main/) and [github.com/athuler/PassioGo](https://github.com/athuler/PassioGo).
@@ -174,9 +174,13 @@ Tab types:
 
 ## Issues
 
+- **Passio vehiclePositions endpoint returns undecodable binary** — the endpoint responds with 1165 bytes of binary with no `Content-Type`, which fails GTFS-RT protobuf decoding. Root cause unknown; may be a different binary format or a Passio server misconfiguration. The bracketed position-based ETA (`[N]`) feature is wired up but non-functional until this is resolved.
+
+### Resolved
+
 - **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
-- **Passio vehicle positions debug showing `null`** — the `fetchPassioVehicles` call was catching errors with `.catch(() => null)`, silently discarding the failure reason. The debug panel then showed `null` instead of any useful diagnostic. Fixed: the error is now captured and surfaced in the debug block.
+- **Passio vehicle positions debug showing `null`** — `fetchPassioVehicles` was swallowing errors with `.catch(() => null)`. Fixed: error is captured and surfaced in the debug block with the response size, content type, and decode message.
 
 ## Wishlist
 
