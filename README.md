@@ -5,6 +5,12 @@ The goal is to let you check upcoming ETAs at your most-used stops and routes as
 aggregating UChicago shuttle (Passio/UGo) and CTA bus data into one view.
 Config is pasted in from a private notes app (not stored in the repo) so API keys and stop preferences stay off GitHub.
 
+## Disclaimer
+
+This project is not sponsored by, affiliated with, or operated by the Chicago Transit Authority (CTA), Metra, UChicago Transportation / UGo, Passio Technologies, or the University of Chicago. It fetches publicly available data from their APIs for personal use only.
+
+**This app shows arrival time estimates only — it is not a wayfinding tool.** It does not plan routes, suggest which bus or train to take, or tell you where to go. For route planning, use the [CTA trip planner](https://www.transitchicago.com/travel-information/), [Metra schedules](https://metra.com/schedules), the Passio GO app, or Google Maps. You need to already know which stops and lines are relevant to your commute before configuring this app.
+
 ## Problem
 
 I need to consult UChicago shuttles and CTAs to decide which to use for which I had to jump between apps. Both google maps and the passio app are map based which is slower then a simple number fetch. I just needed the ETA. And the CTA's text message ETA retrieval is very conveninet, but not when you want to compare two stops, or when you are not there and don't remember the code. 
@@ -26,6 +32,15 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - Must have or be in dark mode for outdoor and night usage.
 - Must be focused and simple.
 
+## Stop IDs and route codes
+
+The `stops/` folder has full stop tables (sourced from public GTFS feeds) for each line:
+
+- [stops/route-4-x4.md](stops/route-4-x4.md) — CTA routes 4 and X4 (Cottage Grove / Cottage Grove Express)
+- [stops/route-192.md](stops/route-192.md) — CTA route 192 (University of Chicago Hospitals Express)
+- [stops/dcc.md](stops/dcc.md) — Downtown Campus Connector (UGo / Passio)
+- [stops/metra-electric.md](stops/metra-electric.md) — Metra Electric District (all three branches)
+
 ## Data sources
 
 ### UGo (Passio) — CORS allowed, no API key needed
@@ -35,6 +50,14 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - UChicago system ID: `1068`
 - **The Passio JSON API (`passiogo.com`) has no CORS — cannot use from browser.** To look up stop IDs from a terminal: POST `https://passiogo.com/mapGetData.php?getStops=2.73` with body `{"s0":"1068","sA":"1"}`. Unofficial API reference: [passiogo.readthedocs.io](https://passiogo.readthedocs.io/en/main/) and [github.com/athuler/PassioGo](https://github.com/athuler/PassioGo).
 - **Loop routes and GTFS-RT:** for routes that run as a single loop (one trip per lap), a stop near the start of the loop will only appear as a future stop in a brief window at the beginning of each lap. If a stop reliably shows no ETAs despite active trips on the route, check its position in the loop — a stop at position 4/15 appears far less often than one at position 14/15.
+
+### Metra Electric — proxied via Cloudflare Worker
+- Trip updates: `https://gtfspublic.metrarr.com/gtfs/public/tripupdates?api_token=KEY`
+- No CORS — requires the same Cloudflare Worker proxy as CTA (`worker.js`). Add `gtfspublic.metrarr.com` to the worker's allowlist (one line, already included in the repo's `worker.js`).
+- Requires a free API key from [metra.com/metra-gtfs-api](https://metra.com/metra-gtfs-api) — license requires a non-affiliation disclaimer (see above) and routing data through a developer-owned proxy (satisfied by `worker.js`).
+- Format: binary GTFS-RT protobuf — same `FeedMessage` schema as Passio
+- **Direction filtering** via `destination_stop_id`: checks whether the destination stop appears *after* the target stop in each trip's remaining stops. No static GTFS lookup needed.
+- Stop IDs: see [stops/metra-electric.md](stops/metra-electric.md)
 
 ### CTA Bus Tracker — proxied via Cloudflare Worker
 - API: `https://www.ctabustracker.com/bustime/api/v2/getpredictions`
@@ -51,6 +74,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
   "passio_system_id": 1068,
   "cta_api_key": "YOUR_KEY_HERE",
   "cta_proxy_url": "https://your-worker.workers.dev",
+  "metra_api_key": "YOUR_METRA_KEY",
   "tabs": [
     {
       "label": "Tab Name",
@@ -61,7 +85,8 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
           "lon": -87.5987,
           "feeds": [
             { "source": "passio", "route": "ROUTE_ID", "stop_id": "STOP_ID", "route_label": "Route Name" },
-            { "source": "cta", "route": "ROUTE_NUMBER", "stop_id": "STOP_ID", "direction": "Northbound" }
+            { "source": "cta", "route": "ROUTE_NUMBER", "stop_id": "STOP_ID", "direction": "Northbound" },
+            { "source": "metra", "stop_id": "STOP_ID", "destination_stop_id": "TERMINUS_STOP_ID", "route_label": "ME → Millennium" }
           ]
         }
       ]
@@ -75,12 +100,14 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 ```
 
 Optional fields:
-- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `https://api.allorigins.win/raw` if omitted.
+- `cta_proxy_url` — URL of your Cloudflare Worker (see `worker.js`). Falls back to `https://api.allorigins.win/raw` if omitted. **Required for Metra** (binary protobuf — allorigins.win may corrupt binary responses).
+- `metra_api_key` — API key for `gtfspublic.metrarr.com`. Free; register at [metra.com/metra-gtfs-api](https://metra.com/metra-gtfs-api). Required only if any tab has a `"source": "metra"` feed.
 - `lat` / `lon` on a stop — enables vehicle-position ETA for Passio feeds at that stop. A haversine estimate `[N]` appears beside arrivals ≤ 12 min. (Currently non-functional — see Issues.)
 - `routes` on a `cta-alerts` tab — array of CTA route numbers to filter bulletins. Omit to fetch all active bulletins.
 - `source_label` on a `cta-alerts` tab — badge label on each alert card. Defaults to `"CTA"`. Set to `"UGo"` (or anything else) for a future Passio alerts tab.
 - `source_icon` on a `cta-alerts` tab — emoji icon shown in the badge. Auto-detected from `source_label` (`"UGo"` → 🚐, otherwise 🚌); override if needed.
 - `loop_last_stop` + `loop_offset_min` on a Passio feed entry — for stops that are early in a loop route and therefore rarely appear as a future stop in the GTFS-RT feed. Set `loop_last_stop` to the stop ID of the last stop on the loop (the stop reliably present in all active trips), and `loop_offset_min` to the travel time in minutes from that last stop back around to your target stop. The app will query the last stop instead and add the offset. Measure `loop_offset_min` from riding the route. Example: `"loop_last_stop": "8591", "loop_offset_min": 7`.
+- `destination_stop_id` on a `metra` feed entry — filters by direction. Only trips that still have this stop in their future stops (after the target stop) are shown. Use `"MILLENNIUM"` for inbound trains and `"UNIVERSITY"`, `"BLUEISLAND"`, or `"93RD-SC"` for outbound by branch. Omit to show both directions.
 - `group` on a stop — stops sharing the same group string collapse into one card. Useful when a single physical location has different stop IDs across transit systems (e.g. the CTA and Passio stops at Roosevelt Station).
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
 - `stop_favorites` on the `cta-stop` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
@@ -158,6 +185,12 @@ Tab types:
           "feeds": [
             { "source": "passio", "route": "5704", "stop_id": "140009", "route_label": "Downtown Campus Connector" }
           ]
+        },
+        {
+          "label": "55th–57th Metra Station",
+          "feeds": [
+            { "source": "metra", "stop_id": "55-56-57TH", "destination_stop_id": "MILLENNIUM", "route_label": "ME → Millennium" }
+          ]
         }
       ]
     },
@@ -186,7 +219,7 @@ Tab types:
 
 ## Wishlist
 
-- **Metra Electric** — explore including Metra Electric District train ETAs.
+- **Metra Electric direction label** — when no `destination_stop_id` is set and both inbound and outbound trains appear, the display doesn't distinguish direction. Could show the train headsign (e.g. "→ Millennium" / "→ University Park") if the GTFS-RT feed includes it, or derive it from the trip ID pattern.
 - **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.
 - **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
