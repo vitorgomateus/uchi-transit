@@ -314,6 +314,12 @@ let rfTimer          = null;
 let lastPassio       = null;
 let _pendingStopSave = null;
 
+// ── Route icons (inline SVG; files live in img/ for reference) ────────────────
+const _svgA = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="1em" height="1em" style="vertical-align:-0.125em;flex-shrink:0" fill="currentColor" aria-hidden="true"';
+const ICON_BUS     = `<svg ${_svgA}><path d="M192 64C139 64 96 107 96 160L96 448C96 477.8 116.4 502.9 144 510L144 544C144 561.7 158.3 576 176 576L192 576C209.7 576 224 561.7 224 544L224 512L416 512L416 544C416 561.7 430.3 576 448 576L464 576C481.7 576 496 561.7 496 544L496 510C523.6 502.9 544 477.8 544 448L544 160C544 107 501 64 448 64L192 64zM160 192C160 174.3 174.3 160 192 160L448 160C465.7 160 480 174.3 480 192L480 288C480 305.7 465.7 320 448 320L192 320C174.3 320 160 305.7 160 288L160 192zM192 384C209.7 384 224 398.3 224 416C224 433.7 209.7 448 192 448C174.3 448 160 433.7 160 416C160 398.3 174.3 384 192 384zM448 384C465.7 384 480 398.3 480 416C480 433.7 465.7 448 448 448C430.3 448 416 433.7 416 416C416 398.3 430.3 384 448 384z"/></svg>`;
+const ICON_SHUTTLE = `<svg ${_svgA}><path d="M96 128C60.7 128 32 156.7 32 192L32 400C32 435.3 60.7 464 96 464L96.4 464C100.4 508.9 138.1 544 184 544C229.9 544 267.6 508.9 271.6 464L376.3 464C380.3 508.9 418 544 463.9 544C510 544 547.8 508.6 551.6 463.5C583.3 459.7 607.9 432.7 607.9 400L607.9 298.7C607.9 284.9 603.4 271.4 595.1 260.3L515.1 153.6C503.1 137.5 484.1 128 464 128L96 128zM536 288L416 288L416 192L464 192L536 288zM96 288L96 192L192 192L192 288L96 288zM256 288L256 192L352 192L352 288L256 288zM424 456C424 433.9 441.9 416 464 416C486.1 416 504 433.9 504 456C504 478.1 486.1 496 464 496C441.9 496 424 478.1 424 456zM184 416C206.1 416 224 433.9 224 456C224 478.1 206.1 496 184 496C161.9 496 144 478.1 144 456C144 433.9 161.9 416 184 416z"/></svg>`;
+const ICON_TRAM    = `<svg ${_svgA}><path d="M128 72C128 58.7 138.7 48 152 48L488 48C501.3 48 512 58.7 512 72L512 104C512 117.3 501.3 128 488 128C474.7 128 464 117.3 464 104L464 96L344 96L344 160L384 160C437 160 480 203 480 256L480 416C480 447.2 465.1 475 442 492.5L506.3 568.5C514.9 578.6 513.6 593.8 503.5 602.3C493.4 610.8 478.2 609.6 469.7 599.5L395.1 511.4C391.5 511.8 387.8 512 384 512L256 512C252.2 512 248.5 511.8 244.9 511.4L170.3 599.5C161.7 609.6 146.6 610.9 136.5 602.3C126.4 593.7 125.1 578.6 133.7 568.5L198 492.5C174.9 475 160 447.2 160 416L160 256C160 203 203 160 256 160L296 160L296 96L176 96L176 104C176 117.3 165.3 128 152 128C138.7 128 128 117.3 128 104L128 72zM256 224C238.3 224 224 238.3 224 256L224 288C224 305.7 238.3 320 256 320L384 320C401.7 320 416 305.7 416 288L416 256C416 238.3 401.7 224 384 224L256 224zM288 416C288 398.3 273.7 384 256 384C238.3 384 224 398.3 224 416C224 433.7 238.3 448 256 448C273.7 448 288 433.7 288 416zM384 448C401.7 448 416 433.7 416 416C416 398.3 401.7 384 384 384C366.3 384 352 398.3 352 416C352 433.7 366.3 448 384 448z"/></svg>`;
+
 // ── Config management ─────────────────────────────────────────────────────────
 function applyConfig() {
   const raw = document.getElementById('cfg-ta').value.trim();
@@ -464,7 +470,7 @@ function renderContent() {
     html += '<div class="route-rows">';
 
     for (const feed of (stop.feeds || [])) {
-      const routeIcon = feed.source === 'passio' ? '🚐' : '🚌';
+      const routeIcon = feed.source === 'passio' ? ICON_SHUTTLE : ICON_BUS;
       const routeLbl  = feed.source === 'passio' ? (feed.route_label || 'Shuttle') : `Route ${feed.route}`;
       const rowDesc   = routeLbl + (feed.direction ? ', ' + feed.direction : '');
       html += '<div class="route-row">';
@@ -819,7 +825,7 @@ async function doAlerts(tab) {
   const wrap = document.getElementById('alerts-wrap');
   if (!wrap) return;
   const srcLabel = tab.source_label ?? 'CTA';
-  const srcIcon  = tab.source_icon  ?? (srcLabel === 'UGo' ? '🚐' : '🚌');
+  const srcIcon  = tab.source_icon  ?? (srcLabel === 'UGo' ? ICON_SHUTTLE : ICON_BUS);
   try {
     const bulletins = await fetchCTAAlerts(tab.routes || []);
     if (!bulletins.length) {
@@ -839,7 +845,8 @@ async function doAlerts(tab) {
       nameEl.textContent = sb.sbj || sb.nm || 'Service Alert';
       const badge = document.createElement('span');
       badge.className = 'alert-src';
-      badge.textContent = srcIcon + ' ' + srcLabel;
+      badge.innerHTML = srcIcon;
+      badge.append(' ' + srcLabel);
       hdr.append(nameEl, badge);
       card.appendChild(hdr);
 
@@ -1031,7 +1038,7 @@ async function doStop() {
         return `<span class="chip" aria-hidden="true">${m}</span>`;
       }).join('');
       return `<div class="stop-card">
-        <div class="stop-name">🚌&nbsp;Route ${r.rt} — ${r.des}</div>
+        <div class="stop-name">${ICON_BUS}&nbsp;Route ${r.rt} — ${r.des}</div>
         <div class="route-rows"><div class="route-row">
           <span class="dir-lbl">${r.dir}</span>
           <div class="arrivals">${chips}</div>
