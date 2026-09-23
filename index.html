@@ -897,14 +897,9 @@ async function doAlerts(tab) {
   const srcLabel = tab.source_label ?? 'CTA';
   const srcIcon  = tab.source_icon  ?? (srcLabel === 'UGo' ? ICON_SHUTTLE : ICON_BUS);
   try {
-    // Deduplicate: same bulletin can appear once per subscribed route
-    const seen = new Set();
-    const bulletins = (await fetchCTAAlerts(tab.routes || [])).filter(sb => {
-      const key = sb.nm + '|' + (sb.sbj || '');
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    // Filter out CTA's auto-generated "Check for #X alerts" placeholder notices
+    const bulletins = (await fetchCTAAlerts(tab.routes || []))
+      .filter(sb => !/^check for #/i.test(sb.nm || ''));
     if (!bulletins.length) {
       wrap.innerHTML = '<p class="card-status" style="text-align:center;padding:32px 0">No active service alerts.</p>';
       return;
