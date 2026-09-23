@@ -204,29 +204,6 @@
     .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
     .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
 
-    #stop-search-toggle {
-      background: none; border: none; color: #0a84ff; cursor: pointer;
-      font-size: 14px; padding: 2px 0; text-align: left;
-    }
-    #stop-search-toggle:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 3px; }
-
-    #stop-search-panel:not([hidden]) {
-      display: flex; flex-direction: column; gap: 10px;
-      background: #1c1c1e; border: 0.5px solid #2c2c2e; border-radius: 12px; padding: 12px;
-    }
-    #search-route-row { display: flex; gap: 8px; }
-    #search-route-inp {
-      flex: 1; background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 8px;
-      color: #fff; font-size: 15px; padding: 8px 12px;
-    }
-    #search-route-inp:focus { outline: none; border-color: #0a84ff; }
-    #search-route-inp::placeholder { color: #636366; }
-    #search-route-go {
-      background: #0a84ff; border: none; border-radius: 8px;
-      color: #fff; cursor: pointer; font-size: 17px; font-weight: 600; padding: 8px 14px;
-    }
-    #search-route-go:active { opacity: 0.8; }
-
     #search-dir-row { display: flex; flex-wrap: wrap; gap: 6px; }
     .dir-pill {
       background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 20px;
@@ -493,27 +470,18 @@ function renderContent() {
     el.innerHTML = `
       <div id="stop-wrap">
         <div id="stop-row">
-          <label for="stop-inp" class="visually-hidden">CTA stop number</label>
-          <input id="stop-inp" type="text" inputmode="numeric"
-            placeholder="CTA stop number" value="${last}"
+          <label for="stop-inp" class="visually-hidden">CTA stop number or route</label>
+          <input id="stop-inp" type="text" inputmode="text"
+            placeholder="Stop number or route (e.g. 4, X9)" value="${last}"
             onkeydown="if(event.key==='Enter')doStop()">
           <button id="stop-go" onclick="doStop()">Go</button>
         </div>
-        <button id="stop-search-toggle" aria-expanded="false" onclick="toggleStopSearch()">Find stop by route…</button>
-        <div id="stop-search-panel" hidden>
-          <div id="search-route-row">
-            <label for="search-route-inp" class="visually-hidden">Route number</label>
-            <input id="search-route-inp" type="text" placeholder="Route (e.g. 4, X9, 66)"
-              onkeydown="if(event.key==='Enter')searchRoute()">
-            <button id="search-route-go" onclick="searchRoute()">→</button>
-          </div>
-          <div id="search-dir-row" hidden></div>
-          <div id="search-filter-row" hidden>
-            <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
-            <input id="search-filter-inp" type="text" placeholder="Filter by name or street…" oninput="filterStops()">
-          </div>
-          <div id="search-stop-list" hidden></div>
+        <div id="search-dir-row" hidden></div>
+        <div id="search-filter-row" hidden>
+          <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
+          <input id="search-filter-inp" type="text" placeholder="Filter by name or street…" oninput="filterStops()">
         </div>
+        <div id="search-stop-list" hidden></div>
         <div id="stop-saved" aria-label="Saved stops"></div>
         <div id="stop-results" aria-live="polite"></div>
       </div>`;
@@ -1045,8 +1013,9 @@ async function doRefresh() {
   }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
-    const inp = document.getElementById('stop-inp');
-    if (inp?.value.trim()) doStop();
+    const inp          = document.getElementById('stop-inp');
+    const inRouteSearch = !document.getElementById('search-dir-row')?.hidden;
+    if (inp?.value.trim() && !inRouteSearch) doStop();
     scheduleNext();
     return;
   }
@@ -1175,7 +1144,16 @@ async function doStop() {
   const res = document.getElementById('stop-results');
   if (!inp) return;
 
+  // Letters or ≤3 digits → route lookup; 4+ pure digits → stop ID
+  if (/[a-zA-Z]/.test(inp) || (/^\d+$/.test(inp) && inp.length <= 3)) {
+    res.innerHTML = '';
+    clearRouteSearch();
+    await searchRoute(inp);
+    return;
+  }
+
   localStorage.setItem('transit_stop', inp);
+  clearRouteSearch();
   res.innerHTML = '<p class="card-status">Loading…</p>';
 
   try {
@@ -1225,30 +1203,29 @@ async function doStop() {
 // ── CTA Stop search (route → direction → stop) ────────────────────────────────
 let _stopSearchCache = null;
 
-function toggleStopSearch() {
-  const panel = document.getElementById('stop-search-panel');
-  const btn   = document.getElementById('stop-search-toggle');
-  const opening = panel.hidden;
-  panel.hidden = !opening;
-  btn.setAttribute('aria-expanded', String(opening));
-  if (opening) document.getElementById('search-route-inp')?.focus();
+function clearRouteSearch() {
+  const dirRow = document.getElementById('search-dir-row');
+  if (dirRow) { dirRow.hidden = true; dirRow.innerHTML = ''; }
+  const filterRow = document.getElementById('search-filter-row');
+  if (filterRow) filterRow.hidden = true;
+  const stopList = document.getElementById('search-stop-list');
+  if (stopList) stopList.hidden = true;
+  _stopSearchCache = null;
 }
 
-async function searchRoute() {
-  const inp    = document.getElementById('search-route-inp');
-  const route  = inp.value.trim().toUpperCase();
-  if (!route) return;
+async function searchRoute(route) {
+  const r      = route.toUpperCase();
   const dirRow = document.getElementById('search-dir-row');
   dirRow.innerHTML = '<span style="color:#8e8e93;font-size:14px">Loading…</span>';
   dirRow.hidden = false;
   document.getElementById('search-filter-row').hidden = true;
   document.getElementById('search-stop-list').hidden  = true;
   try {
-    const btr  = await ctaApi('getdirections', { rt: route });
+    const btr  = await ctaApi('getdirections', { rt: r });
     const dirs = btr?.directions ?? [];
-    if (!dirs.length) throw new Error('No directions found for route ' + route);
+    if (!dirs.length) throw new Error('No directions found for route ' + r);
     dirRow.innerHTML = dirs.map(d =>
-      `<button class="dir-pill" onclick="selectDir('${esc(route)}','${esc(d.dir)}')">${esc(d.dir)}</button>`
+      `<button class="dir-pill" onclick="selectDir('${esc(r)}','${esc(d.dir)}')">${esc(d.dir)}</button>`
     ).join('');
   } catch (e) {
     dirRow.innerHTML = `<span style="color:#ff453a;font-size:14px">${esc(e.message)}</span>`;
@@ -1303,9 +1280,10 @@ function renderStopSearchList(stops) {
 }
 
 function selectSearchStop(btn) {
-  document.getElementById('stop-inp').value = btn.dataset.stpid;
-  document.getElementById('stop-search-panel').hidden = true;
-  document.getElementById('stop-search-toggle').setAttribute('aria-expanded', 'false');
+  const stopId = btn.dataset.stpid;
+  localStorage.setItem('transit_stop', stopId);
+  document.getElementById('stop-inp').value = stopId;
+  clearRouteSearch();
   doStop();
 }
 
