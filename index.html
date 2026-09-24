@@ -204,6 +204,35 @@
     .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
     .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
 
+    #search-dir-row:not([hidden]) { display: flex; flex-wrap: wrap; gap: 6px; }
+    .dir-pill {
+      background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 20px;
+      color: #fff; cursor: pointer; font-size: 14px; padding: 6px 14px;
+    }
+    .dir-pill.active { background: #0a84ff; border-color: #0a84ff; }
+    .dir-pill:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+
+    #search-filter-inp {
+      width: 100%; background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 8px;
+      color: #fff; font-size: 15px; padding: 8px 12px;
+    }
+    #search-filter-inp:focus { outline: none; border-color: #0a84ff; }
+    #search-filter-inp::placeholder { color: #636366; }
+
+    #search-stop-list:not([hidden]) {
+      display: flex; flex-direction: column; max-height: 260px; overflow-y: auto;
+    }
+    .search-stop-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: none; border: none; border-bottom: 0.5px solid #2c2c2e;
+      color: #fff; cursor: pointer; font-size: 14px; gap: 8px;
+      padding: 9px 4px; text-align: left; width: 100%;
+    }
+    .search-stop-item:last-child { border-bottom: none; }
+    .search-stop-item:hover, .search-stop-item:focus { background: #2c2c2e; outline: none; }
+    .search-stop-name { flex: 1; }
+    .search-stop-id { color: #636366; font-size: 12px; white-space: nowrap; }
+
     #debug-sections > details { margin-top: 4px; }
     #debug-sections > details > summary {
       font-size: 12px; color: #8e8e93; cursor: pointer; padding: 4px 0;
@@ -437,20 +466,27 @@ function renderContent() {
   }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
-    const last = localStorage.getItem('transit_stop') || '';
     el.innerHTML = `
       <div id="stop-wrap">
         <div id="stop-row">
-          <label for="stop-inp" class="visually-hidden">CTA stop number</label>
-          <input id="stop-inp" type="text" inputmode="numeric"
-            placeholder="CTA stop number" value="${last}"
-            onkeydown="if(event.key==='Enter')doStop()">
+          <label for="stop-inp" class="visually-hidden">CTA stop number or route</label>
+          <input id="stop-inp" type="text" inputmode="text"
+            placeholder="Stop number or route (e.g. 4, X9)"
+            oninput="clearRouteSearch()" onkeydown="if(event.key==='Enter')doStop()">
           <button id="stop-go" onclick="doStop()">Go</button>
         </div>
+        <div id="search-dir-row" hidden></div>
+        <div id="search-filter-row" hidden>
+          <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
+          <input id="search-filter-inp" type="text" placeholder="Filter by name or street…"
+            oninput="filterStops()" onkeydown="filterInpKeydown(event)">
+        </div>
+        <div id="search-stop-list" hidden onkeydown="stopListKeydown(event)"></div>
         <div id="stop-saved" aria-label="Saved stops"></div>
         <div id="stop-results" aria-live="polite"></div>
       </div>`;
     renderSavedStops();
+    document.getElementById('stop-inp')?.focus();
     return;
   }
 
@@ -875,6 +911,22 @@ async function fetchCTARaw(stopId) {
   return preds;
 }
 
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+async function ctaApi(endpoint, params) {
+  if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE')
+    throw new Error('No CTA API key — add one to your config');
+  const url = 'https://www.ctabustracker.com/bustime/api/v2/' + endpoint + '?' +
+    new URLSearchParams({ key: cfg.cta_api_key, format: 'json', ...params });
+  const res = await fetch(ctaProxy() + encodeURIComponent(url));
+  if (!res.ok) throw new Error('CTA HTTP ' + res.status);
+  const btr = (await res.json())?.['bustime-response'];
+  if (btr?.error?.length) throw new Error(btr.error[0]?.msg || 'CTA error');
+  return btr;
+}
+
 async function fetchCTAAlerts(routes) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
     throw new Error('No CTA API key — add one to your config');
@@ -962,8 +1014,9 @@ async function doRefresh() {
   }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
-    const inp = document.getElementById('stop-inp');
-    if (inp?.value.trim()) doStop();
+    const inp          = document.getElementById('stop-inp');
+    const inRouteSearch = !document.getElementById('search-dir-row')?.hidden;
+    if (inp?.value.trim() && !inRouteSearch) doStop();
     scheduleNext();
     return;
   }
@@ -1092,7 +1145,15 @@ async function doStop() {
   const res = document.getElementById('stop-results');
   if (!inp) return;
 
-  localStorage.setItem('transit_stop', inp);
+  // Letters or ≤3 digits → route lookup; 4+ pure digits → stop ID
+  if (/[a-zA-Z]/.test(inp) || (/^\d+$/.test(inp) && inp.length <= 3)) {
+    res.innerHTML = '';
+    clearRouteSearch();
+    await searchRoute(inp);
+    return;
+  }
+
+  clearRouteSearch();
   res.innerHTML = '<p class="card-status">Loading…</p>';
 
   try {
@@ -1138,6 +1199,125 @@ async function doStop() {
   }
 }
 
+
+// ── CTA Stop search (route → direction → stop) ────────────────────────────────
+let _stopSearchCache = null;
+
+function clearRouteSearch() {
+  const dirRow = document.getElementById('search-dir-row');
+  if (dirRow) { dirRow.hidden = true; dirRow.innerHTML = ''; }
+  const filterRow = document.getElementById('search-filter-row');
+  if (filterRow) filterRow.hidden = true;
+  const stopList = document.getElementById('search-stop-list');
+  if (stopList) stopList.hidden = true;
+  _stopSearchCache = null;
+}
+
+async function searchRoute(route) {
+  const r      = route.toUpperCase();
+  const dirRow = document.getElementById('search-dir-row');
+  dirRow.innerHTML = '<span style="color:#8e8e93;font-size:14px">Loading…</span>';
+  dirRow.hidden = false;
+  document.getElementById('search-filter-row').hidden = true;
+  document.getElementById('search-stop-list').hidden  = true;
+  try {
+    const btr  = await ctaApi('getdirections', { rt: r });
+    const dirs = btr?.directions ?? [];
+    if (!dirs.length) throw new Error('No directions found for route ' + r);
+    dirRow.innerHTML = dirs.map(d =>
+      `<button class="dir-pill" onclick="selectDir('${esc(r)}','${esc(d.dir)}')">${esc(d.dir)}</button>`
+    ).join('');
+  } catch (e) {
+    dirRow.innerHTML = `<span style="color:#ff453a;font-size:14px">${esc(e.message)}</span>`;
+  }
+}
+
+async function selectDir(route, dir) {
+  document.querySelectorAll('.dir-pill').forEach(b =>
+    b.classList.toggle('active', b.textContent.trim() === dir));
+  const stopList  = document.getElementById('search-stop-list');
+  const filterRow = document.getElementById('search-filter-row');
+  filterRow.hidden = true;
+  stopList.innerHTML = '<p class="card-status">Loading stops…</p>';
+  stopList.hidden = false;
+  try {
+    const btr  = await ctaApi('getstops', { rt: route, dir });
+    const stops = btr?.stops ?? [];
+    _stopSearchCache = { stops };
+    document.getElementById('search-filter-inp').value = '';
+    filterRow.hidden = false;
+    renderStopSearchList(stops);
+    document.getElementById('search-filter-inp').focus();
+  } catch (e) {
+    stopList.innerHTML = `<p class="card-err">${esc(e.message)}</p>`;
+  }
+}
+
+function filterStops() {
+  if (!_stopSearchCache) return;
+  const q     = document.getElementById('search-filter-inp').value.trim().toLowerCase();
+  const words = q.split(/\s+/).filter(Boolean);
+  const hits  = words.length
+    ? _stopSearchCache.stops.filter(s => words.every(w => s.stpnm.toLowerCase().includes(w)))
+    : _stopSearchCache.stops;
+  renderStopSearchList(hits);
+  // keep keyboard cursor on first visible item after re-filter
+  document.querySelector('.search-stop-item')?.setAttribute('tabindex', '0');
+}
+
+function filterInpKeydown(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    document.querySelector('.search-stop-item')?.focus();
+  }
+}
+
+function setStopCursor(items, target) {
+  items.forEach(b => b.setAttribute('tabindex', '-1'));
+  target.setAttribute('tabindex', '0');
+  target.focus();
+}
+
+function stopListKeydown(e) {
+  if (!['ArrowDown', 'ArrowUp', 'Tab'].includes(e.key)) return;
+  const items = [...document.querySelectorAll('.search-stop-item')];
+  const idx   = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (items[idx + 1]) setStopCursor(items, items[idx + 1]);
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (idx <= 0) document.getElementById('search-filter-inp')?.focus();
+    else setStopCursor(items, items[idx - 1]);
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    if (e.shiftKey) document.getElementById('search-filter-inp')?.focus();
+  }
+}
+
+function renderStopSearchList(stops) {
+  const list = document.getElementById('search-stop-list');
+  if (!stops.length) {
+    list.innerHTML = '<p class="card-status" style="padding:8px 4px">No matching stops.</p>';
+    list.hidden = false;
+    return;
+  }
+  list.innerHTML = stops.map((s, i) =>
+    `<button class="search-stop-item" tabindex="${i === 0 ? '0' : '-1'}"
+      data-stpid="${esc(s.stpid)}" data-stpnm="${esc(s.stpnm)}" onclick="selectSearchStop(this)">
+      <span class="search-stop-name">${esc(s.stpnm)}</span>
+      <span class="search-stop-id">#${esc(s.stpid)}</span>
+    </button>`
+  ).join('');
+  list.hidden = false;
+}
+
+function selectSearchStop(btn) {
+  const stopId = btn.dataset.stpid;
+  document.getElementById('stop-inp').value = stopId;
+  clearRouteSearch();
+  doStop();
+}
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 try {
