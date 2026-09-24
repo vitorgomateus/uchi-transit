@@ -479,13 +479,15 @@ function renderContent() {
         <div id="search-dir-row" hidden></div>
         <div id="search-filter-row" hidden>
           <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
-          <input id="search-filter-inp" type="text" placeholder="Filter by name or street…" oninput="filterStops()">
+          <input id="search-filter-inp" type="text" placeholder="Filter by name or street…"
+            oninput="filterStops()" onkeydown="filterInpKeydown(event)">
         </div>
-        <div id="search-stop-list" hidden></div>
+        <div id="search-stop-list" hidden onkeydown="stopListKeydown(event)"></div>
         <div id="stop-saved" aria-label="Saved stops"></div>
         <div id="stop-results" aria-live="polite"></div>
       </div>`;
     renderSavedStops();
+    document.getElementById('stop-inp')?.focus();
     return;
   }
 
@@ -1261,6 +1263,26 @@ function filterStops() {
     ? _stopSearchCache.stops.filter(s => words.every(w => s.stpnm.toLowerCase().includes(w)))
     : _stopSearchCache.stops;
   renderStopSearchList(hits);
+}
+
+function filterInpKeydown(e) {
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    document.querySelector('.search-stop-item')?.focus();
+  }
+}
+
+function stopListKeydown(e) {
+  if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+  e.preventDefault();
+  const items = [...document.querySelectorAll('.search-stop-item')];
+  const idx   = items.indexOf(document.activeElement);
+  if (e.key === 'ArrowDown') {
+    items[idx + 1]?.focus();
+  } else {
+    if (idx <= 0) document.getElementById('search-filter-inp')?.focus();
+    else items[idx - 1].focus();
+  }
 }
 
 function renderStopSearchList(stops) {
