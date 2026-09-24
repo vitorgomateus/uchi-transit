@@ -125,7 +125,7 @@
     .stop-card.no-service .no-svc-label { display: inline; }
 
     .stop-name {
-      font-size: 17px; font-weight: 700; margin-bottom: 10px;
+      font-size: 17px; font-weight: 700; margin: 0 0 10px;
     }
     .stop-card.no-service .stop-name { margin-bottom: 0; }
 
@@ -203,7 +203,7 @@
     .stop-fav:active { opacity: 0.7; }
     .stop-fav:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; border-radius: 20px; }
     .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
-    .stop-results-hd { display: flex; align-items: baseline; gap: 6px; padding-bottom: 4px; }
+    .stop-results-hd { display: flex; align-items: baseline; gap: 6px; padding-bottom: 4px; margin: 0; font-weight: normal; }
     .stop-results-name { color: #fff; font-size: 15px; font-weight: 600; }
     .stop-results-id { color: #636366; font-size: 12px; }
     .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
@@ -510,7 +510,7 @@ function renderContent() {
     card.className = 'stop-card';
     card.dataset.gid = stop.label;
 
-    let html = `<div class="stop-name">${stop.label}</div>`;
+    let html = `<h2 class="stop-name">${stop.label}</h2>`;
     html += '<span class="no-svc-label">No service scheduled</span>';
     html += '<div class="route-rows">';
 
@@ -993,7 +993,7 @@ async function doAlerts(tab) {
 
       const hdr = document.createElement('div');
       hdr.style.cssText = 'display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap';
-      const nameEl = document.createElement('div');
+      const nameEl = document.createElement('h2');
       nameEl.className = 'stop-name';
       nameEl.style.marginBottom = '0';
       nameEl.textContent = sb.sbj || sb.nm || 'Service Alert';
@@ -1188,10 +1188,10 @@ function renderStopETAs(res, inp, preds) {
     if (!isNaN(m)) byRoute[p.rt].arrivals.push({ m });
   }
 
-  const headingHtml = `<div class="stop-results-hd">
+  const headingHtml = `<h2 class="stop-results-hd">
     <span class="stop-results-name">${esc(stopName)}</span>
     <span class="stop-results-id">#${esc(inp)}</span>
-  </div>`;
+  </h2>`;
 
   const cardsHtml = `<div role="list">` + Object.values(byRoute).map(r => {
     const chips = r.arrivals.slice(0, 3).map(({ m }) => {
