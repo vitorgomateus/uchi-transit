@@ -125,7 +125,7 @@ Optional fields:
 
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
-- `"type": "cta-stop"`: ad-hoc stop lookup widget. The single search input accepts either a numeric stop ID (4+ digits, e.g. `14760`) or a route code (letters or ≤3 digits, e.g. `4`, `X9`). For a route code, it shows direction buttons fetched from the CTA API; selecting a direction loads a filterable list of all stops on that route in that direction; tapping a stop fetches ETAs for it.
+- `"type": "cta-stop"`: ad-hoc stop lookup widget. The search input accepts a stop ID (any number, e.g. `316`, `14760`) or a route code (e.g. `4`, `X9`, `192`). Letter-containing input is treated as a route code only; pure-digit input fires both APIs in parallel — direction pills appear if the number is a valid route, ETA cards appear if it is a valid stop, and both can appear simultaneously if the number happens to be both.
 - `"type": "cta-alerts"`: CTA service bulletins from `getservicebulletins`. Optional `routes` array filters to specific routes; omit for all alerts.
 
 ```json
@@ -213,7 +213,7 @@ Tab types:
 
 ### Resolved
 
-- **Route-code search on the CTA Stop tab** — the search input now accepts a route code (e.g. `4`, `X9`) in addition to a stop ID. Typing a route code fetches directions from `getdirections`, shows direction pills, then fetches the full stop list from `getstops` for the chosen direction. Stops are filterable by name or street. Selecting a stop auto-fills the input and fetches ETAs. The stop list is cleared whenever the input changes, so stale results never linger.
+- **Route-code search on the CTA Stop tab** — the search input now accepts a route code in addition to a stop ID. For pure-digit input both `getdirections` and `getpredictions` fire in parallel (a number like `316` is a valid stop ID but could also be a route); direction pills appear if a matching route is found, ETA cards appear if a matching stop is found. Letter-containing input (e.g. `X4`) is route-only. Stop list responses are cached for 5 minutes to avoid redundant API calls when toggling directions.
 
 - **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
