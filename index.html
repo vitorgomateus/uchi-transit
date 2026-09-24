@@ -204,7 +204,7 @@
     .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
     .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
 
-    #search-dir-row { display: flex; flex-wrap: wrap; gap: 6px; }
+    #search-dir-row:not([hidden]) { display: flex; flex-wrap: wrap; gap: 6px; }
     .dir-pill {
       background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 20px;
       color: #fff; cursor: pointer; font-size: 14px; padding: 6px 14px;
@@ -219,7 +219,7 @@
     #search-filter-inp:focus { outline: none; border-color: #0a84ff; }
     #search-filter-inp::placeholder { color: #636366; }
 
-    #search-stop-list {
+    #search-stop-list:not([hidden]) {
       display: flex; flex-direction: column; max-height: 260px; overflow-y: auto;
     }
     .search-stop-item {
