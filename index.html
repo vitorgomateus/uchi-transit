@@ -466,14 +466,13 @@ function renderContent() {
   }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
-    const last = localStorage.getItem('transit_stop') || '';
     el.innerHTML = `
       <div id="stop-wrap">
         <div id="stop-row">
           <label for="stop-inp" class="visually-hidden">CTA stop number or route</label>
           <input id="stop-inp" type="text" inputmode="text"
-            placeholder="Stop number or route (e.g. 4, X9)" value="${last}"
-            onkeydown="if(event.key==='Enter')doStop()">
+            placeholder="Stop number or route (e.g. 4, X9)"
+            oninput="clearRouteSearch()" onkeydown="if(event.key==='Enter')doStop()">
           <button id="stop-go" onclick="doStop()">Go</button>
         </div>
         <div id="search-dir-row" hidden></div>
@@ -1154,7 +1153,6 @@ async function doStop() {
     return;
   }
 
-  localStorage.setItem('transit_stop', inp);
   clearRouteSearch();
   res.innerHTML = '<p class="card-status">Loading…</p>';
 
@@ -1316,7 +1314,6 @@ function renderStopSearchList(stops) {
 
 function selectSearchStop(btn) {
   const stopId = btn.dataset.stpid;
-  localStorage.setItem('transit_stop', stopId);
   document.getElementById('stop-inp').value = stopId;
   clearRouteSearch();
   doStop();
