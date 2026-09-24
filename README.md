@@ -21,7 +21,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
-- **localStorage keys:** `transit_cfg` (full config), `transit_stop` (last CTA Stop input), `transit_stops` (saved stops list, JSON array), `transit_tab` (last active tab index + timestamp, restored on load if < 30 min old)
+- **localStorage keys:** `transit_cfg` (full config), `transit_stops` (saved stops list, JSON array), `transit_tab` (last active tab index + timestamp, restored on load if < 30 min old)
 - **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
 - **Debug panel:** each tab has a collapsible Debug section at the bottom showing the raw parsed feed data for the last refresh — useful for verifying stop IDs and diagnosing missing arrivals. See [debug-guide.md](debug-guide.md) for annotated examples.
 
@@ -125,7 +125,7 @@ Optional fields:
 
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
-- `"type": "cta-stop"`: ad-hoc stop number lookup widget
+- `"type": "cta-stop"`: ad-hoc stop lookup widget. The single search input accepts either a numeric stop ID (4+ digits, e.g. `14760`) or a route code (letters or ≤3 digits, e.g. `4`, `X9`). For a route code, it shows direction buttons fetched from the CTA API; selecting a direction loads a filterable list of all stops on that route in that direction; tapping a stop fetches ETAs for it.
 - `"type": "cta-alerts"`: CTA service bulletins from `getservicebulletins`. Optional `routes` array filters to specific routes; omit for all alerts.
 
 ```json
@@ -213,6 +213,8 @@ Tab types:
 
 ### Resolved
 
+- **Route-code search on the CTA Stop tab** — the search input now accepts a route code (e.g. `4`, `X9`) in addition to a stop ID. Typing a route code fetches directions from `getdirections`, shows direction pills, then fetches the full stop list from `getstops` for the chosen direction. Stops are filterable by name or street. Selecting a stop auto-fills the input and fetches ETAs. The stop list is cleared whenever the input changes, so stale results never linger.
+
 - **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
 - **Passio vehicle positions debug showing `null`** — `fetchPassioVehicles` was swallowing errors with `.catch(() => null)`. Fixed: error is captured and surfaced in the debug block with the response size, content type, and decode message.
@@ -222,7 +224,6 @@ Tab types:
 - **Metra Electric direction label** — when no `destination_stop_id` is set and both inbound and outbound trains appear, the display doesn't distinguish direction. Could show the train headsign (e.g. "→ Millennium" / "→ University Park") if the GTFS-RT feed includes it, or derive it from the trip ID pattern.
 - **Long-press shortcuts** — some apps surface shortcuts on long-press of the home screen icon; explore whether the Web App Manifest `shortcuts` key could expose quick-jump actions (e.g. "To Work", "From Work").
 - **Arrival notifications** — "Notify me 5 min before [route] at [stop]" feature using the Notifications + Background Sync APIs. This feature needs to be thought through before implementing.
-- **Intersection stop lookup** — enter a cross-street (e.g. "Michigan and 16th") and get a list of all stops and routes passing through it, without needing to know stop IDs in advance. It probably makes sense to input the line as well, or be able to select a line to further filter, because it will be too noisy. This feature needs to be well thought of, before implementation.
 
 ## Abandoned
 
