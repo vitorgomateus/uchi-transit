@@ -125,7 +125,7 @@
     .stop-card.no-service .no-svc-label { display: inline; }
 
     .stop-name {
-      font-size: 17px; font-weight: 700; margin: 0 0 10px;
+      font-size: 17px; font-weight: 700; margin: 0 0 10px; /* h3 — reset UA heading margins */
     }
     .stop-card.no-service .stop-name { margin-bottom: 0; }
 
@@ -466,13 +466,14 @@ function renderContent() {
   if (!tab) return;
 
   if (tab.type === 'cta-alerts') {
-    el.innerHTML = '<div id="alerts-wrap" aria-live="polite"><p class="card-status">Loading…</p></div>';
+    el.innerHTML = `<h2 class="visually-hidden">${esc(tab.label)}</h2><div id="alerts-wrap" aria-live="polite"><p class="card-status">Loading…</p></div>`;
     return;
   }
 
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
     el.innerHTML = `
       <div id="stop-wrap">
+        <h2 class="visually-hidden">${esc(tab.label)}</h2>
         <div id="stop-row">
           <label for="stop-inp" class="visually-hidden">CTA stop number or route</label>
           <input id="stop-inp" type="text" inputmode="text"
@@ -502,7 +503,7 @@ function renderContent() {
     return;
   }
 
-  el.innerHTML = '';
+  el.innerHTML = `<h2 class="visually-hidden">${esc(tab.label)}</h2>`;
   let feedIdx = 0;
 
   for (const stop of stops) {
@@ -510,7 +511,7 @@ function renderContent() {
     card.className = 'stop-card';
     card.dataset.gid = stop.label;
 
-    let html = `<h2 class="stop-name">${stop.label}</h2>`;
+    let html = `<h3 class="stop-name">${stop.label}</h3>`;
     html += '<span class="no-svc-label">No service scheduled</span>';
     html += '<div class="route-rows">';
 
@@ -993,7 +994,7 @@ async function doAlerts(tab) {
 
       const hdr = document.createElement('div');
       hdr.style.cssText = 'display:flex;align-items:baseline;gap:8px;margin-bottom:8px;flex-wrap:wrap';
-      const nameEl = document.createElement('h2');
+      const nameEl = document.createElement('h3');
       nameEl.className = 'stop-name';
       nameEl.style.marginBottom = '0';
       nameEl.textContent = sb.sbj || sb.nm || 'Service Alert';
@@ -1188,10 +1189,10 @@ function renderStopETAs(res, inp, preds) {
     if (!isNaN(m)) byRoute[p.rt].arrivals.push({ m });
   }
 
-  const headingHtml = `<h2 class="stop-results-hd">
+  const headingHtml = `<h3 class="stop-results-hd">
     <span class="stop-results-name">${esc(stopName)}</span>
     <span class="stop-results-id">#${esc(inp)}</span>
-  </h2>`;
+  </h3>`;
 
   const cardsHtml = `<div role="list">` + Object.values(byRoute).map(r => {
     const chips = r.arrivals.slice(0, 3).map(({ m }) => {
