@@ -29,7 +29,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - Must be efficient and fast.
 - Must be accessible (WCAG 2.0 AA compliant).
 - Must be mobile screen responsive.
-- Must have or be in dark mode for outdoor and night usage.
+- Must have or be in dark mode for outdoor and night usage. Optimized for OLED: page and card backgrounds are pure black (`#000`); cards are separated by a border rather than a fill.
 - Must be focused and simple.
 
 ## Stop IDs and route codes
@@ -210,8 +210,17 @@ Tab types:
 ## Issues
 
 - **Passio vehiclePositions endpoint returns undecodable binary** — the endpoint responds with 1165 bytes of binary with no `Content-Type`, which fails GTFS-RT protobuf decoding. Root cause unknown; may be a different binary format or a Passio server misconfiguration. The bracketed position-based ETA (`[N]`) feature is wired up but non-functional until this is resolved.
+- **No-service dash contrast** — the `—` shown for a route with no service (`.no-arr`, `#3a3a3c` on `#000`) is 1.85:1. Screen readers get "No service" from visually-hidden text, but the visible glyph is below the WCAG 1.4.3 text threshold.
 
 ### Resolved
+
+- **Accessibility pass (WCAG 2.0 AA)**:
+  - **Pinch zoom:** removed `maximum-scale=1` from the viewport meta (1.4.4).
+  - **Text contrast:** tertiary greys raised to ≥ 4.5:1 against their actual background: `#78787c` on `#000` (4.78:1) and `#98989d` on `#2c2c2e` chips and inputs (4.85:1). The affected elements are direction labels, `[N]` ETAs, status text, stop IDs, the filter placeholder and the × remove button. Filled blue buttons use `#0066e0` so white text is 5.28:1; `#0a84ff` was 3.65:1.
+  - **Stop list roles:** `role="listitem"` moved off the stop-list `<button>` onto a wrapper `div`, so the button keeps its role. The "No matching stops" message is no longer inside a `role="list"`.
+  - **Arrival text for screen readers:** arrival rows carry their summary ("Due, 4 min, 14 min") as visually-hidden text instead of `aria-label` on a generic `div`. The direction pill row is `role="group"`. CTA Stop results previously had no text alternative for the `aria-hidden` chips and now use the same summary.
+  - **Quieter announcements:** arrival rows, alerts, stop results and the stop list are no longer `aria-live`, so the 30s auto-refresh is silent. A single `role="status"` region announces "Arrivals updated" or "Alerts updated" after the refresh button, a short summary after a stop lookup, and the match count while filtering stops (debounced).
+  - **Reduced motion:** a `prefers-reduced-motion` guard disables transitions and the refresh button press animation.
 
 - **Route-code search on the CTA Stop tab** — the search input now accepts a route code in addition to a stop ID. For pure-digit input both `getdirections` and `getpredictions` fire in parallel (a number like `316` is a valid stop ID but could also be a route); direction pills appear if a matching route is found, ETA cards appear if a matching stop is found. Letter-containing input (e.g. `X4`) is route-only. Stop list responses are cached for 5 minutes to avoid redundant API calls when toggling directions.
 

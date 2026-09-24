@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#000000">
@@ -46,7 +46,7 @@
     #cfg-err { color: #ff453a; font-size: 13px; display: none; max-width: 480px; }
 
     .primary-btn {
-      background: #0a84ff; color: #fff; border: none; border-radius: 12px;
+      background: #0066e0; color: #fff; border: none; border-radius: 12px;
       padding: 14px 0; font-size: 17px; font-weight: 600; cursor: pointer;
       width: 100%; max-width: 480px;
     }
@@ -83,7 +83,7 @@
 
     #refresh-fab {
       width: 54px; height: 54px; border-radius: 50%;
-      background: #0a84ff; border: none; cursor: pointer; color: #fff;
+      background: #0066e0; border: none; cursor: pointer; color: #fff;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 16px rgba(0,0,0,0.5);
     }
@@ -110,7 +110,7 @@
 
     /* Cards */
     .stop-card {
-      background: #1c1c1e; border-radius: 12px; padding: 14px 16px;
+      background: #000; border: 1px solid #3a3a3c; border-radius: 12px; padding: 14px 16px;
     }
 
     /* Collapsed: all routes at this stop have no service */
@@ -120,7 +120,7 @@
     }
     .stop-card.no-service .route-rows { display: none; }
     .no-svc-label {
-      display: none; font-size: 13px; color: #636366;
+      display: none; font-size: 13px; color: #78787c;
     }
     .stop-card.no-service .no-svc-label { display: inline; }
 
@@ -138,7 +138,7 @@
       white-space: nowrap;
     }
     .dir-lbl {
-      font-size: 11px; color: #48484a;
+      font-size: 11px; color: #78787c;
       text-transform: uppercase; letter-spacing: 0.3px;
       white-space: nowrap;
     }
@@ -153,9 +153,9 @@
     .chip.due  { background: rgba(255,214,10,0.15); color: #ffd60a; }
     .chip.soon { color: #30d158; }
     .chip.loop { background: rgba(10,132,255,0.15); color: #0a84ff; }
-    .eta { font-size: 11px; font-weight: 400; color: #48484a; }
+    .eta { font-size: 11px; font-weight: 400; color: #98989d; }
 
-    .card-status { font-size: 14px; color: #636366; }
+    .card-status { font-size: 14px; color: #78787c; }
     .card-err    { font-size: 13px; color: #ff453a; }
     .no-arr      { font-size: 13px; color: #3a3a3c; }
     .alert-src   { font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
@@ -188,7 +188,7 @@
     #stop-inp:focus { outline: none; border-color: #0a84ff; }
 
     #stop-go {
-      background: #0a84ff; border: none; border-radius: 10px;
+      background: #0066e0; border: none; border-radius: 10px;
       color: #fff; cursor: pointer; font-size: 17px; font-weight: 600;
       padding: 10px 18px;
     }
@@ -202,10 +202,10 @@
     .stop-fav { background: none; border: none; color: #fff; cursor: pointer; font-size: 13px; padding: 6px 12px; }
     .stop-fav:active { opacity: 0.7; }
     .stop-fav:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; border-radius: 20px; }
-    .stop-fav-rm { background: none; border: none; color: #636366; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
+    .stop-fav-rm { background: none; border: none; color: #98989d; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
     .stop-results-hd { display: flex; align-items: baseline; gap: 6px; padding-bottom: 4px; margin: 0; font-weight: normal; }
     .stop-results-name { color: #fff; font-size: 15px; font-weight: 600; }
-    .stop-results-id { color: #636366; font-size: 12px; }
+    .stop-results-id { color: #78787c; font-size: 12px; }
     .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
 
     [hidden] { display: none !important; }
@@ -214,7 +214,7 @@
       background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 20px;
       color: #fff; cursor: pointer; font-size: 14px; padding: 6px 14px;
     }
-    .dir-pill.active { background: #0a84ff; border-color: #0a84ff; }
+    .dir-pill.active { background: #0066e0; border-color: #0066e0; }
     .dir-pill:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 
     #search-filter-inp {
@@ -222,7 +222,7 @@
       color: #fff; font-size: 15px; padding: 8px 12px;
     }
     #search-filter-inp:focus { outline: none; border-color: #0a84ff; }
-    #search-filter-inp::placeholder { color: #636366; }
+    #search-filter-inp::placeholder { color: #98989d; }
 
     #search-stop-list {
       display: flex; flex-direction: column; max-height: 260px; overflow-y: auto;
@@ -233,10 +233,10 @@
       color: #fff; cursor: pointer; font-size: 14px; gap: 8px;
       padding: 9px 4px; text-align: left; width: 100%;
     }
-    .search-stop-item:last-child { border-bottom: none; }
+    #search-stop-list > [role="listitem"]:last-child .search-stop-item { border-bottom: none; }
     .search-stop-item:hover, .search-stop-item:focus { background: #2c2c2e; outline: none; }
     .search-stop-name { flex: 1; }
-    .search-stop-id { color: #636366; font-size: 12px; white-space: nowrap; }
+    .search-stop-id { color: #98989d; font-size: 12px; white-space: nowrap; }
 
     #debug-sections > details { margin-top: 4px; }
     #debug-sections > details > summary {
@@ -244,6 +244,16 @@
       user-select: none; list-style: none;
     }
     #debug-sections > details > summary::-webkit-details-marker { display: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+      #refresh-fab:active { transform: none; }
+    }
   </style>
 </head>
 <body>
@@ -274,9 +284,10 @@
     <nav id="tabs" role="tablist" aria-label="Transit tabs"></nav>
   </header>
   <main id="content"></main>
+  <div id="sr-status" class="visually-hidden" role="status"></div>
   <div id="refresh-wrap">
     <span id="refresh-cd" aria-hidden="true"></span>
-    <button id="refresh-fab" onclick="doRefresh()" aria-label="Refresh arrivals" title="Refresh arrivals">
+    <button id="refresh-fab" onclick="doRefresh(true)" aria-label="Refresh arrivals" title="Refresh arrivals">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
     </button>
   </div>
@@ -466,7 +477,7 @@ function renderContent() {
   if (!tab) return;
 
   if (tab.type === 'cta-alerts') {
-    el.innerHTML = `<h2 class="visually-hidden">${esc(tab.label)}</h2><div id="alerts-wrap" aria-live="polite"><p class="card-status">Loading…</p></div>`;
+    el.innerHTML = `<h2 class="visually-hidden">${esc(tab.label)}</h2><div id="alerts-wrap"><p class="card-status">Loading…</p></div>`;
     return;
   }
 
@@ -481,15 +492,15 @@ function renderContent() {
             oninput="clearRouteSearch()" onkeydown="if(event.key==='Enter')doStop()">
           <button id="stop-go" onclick="doStop()">Go</button>
         </div>
-        <div id="search-dir-row" hidden aria-live="polite" aria-label="Route directions"></div>
+        <div id="search-dir-row" hidden role="group" aria-live="polite" aria-label="Route directions"></div>
         <div id="search-filter-row" hidden>
           <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
           <input id="search-filter-inp" type="text" placeholder="Filter by name or street…"
             oninput="filterStops()" onkeydown="filterInpKeydown(event)">
         </div>
-        <div id="search-stop-list" hidden role="list" aria-live="polite" aria-label="Stops on route" onkeydown="stopListKeydown(event)"></div>
+        <div id="search-stop-list" hidden role="list" aria-label="Stops on route" onkeydown="stopListKeydown(event)"></div>
         <div id="stop-saved" role="list" aria-label="Saved stops" onkeydown="savedFavsKeydown(event)"></div>
-        <div id="stop-results" aria-live="polite"></div>
+        <div id="stop-results"></div>
       </div>`;
     renderSavedStops();
     if (!window.matchMedia('(pointer: coarse)').matches)
@@ -520,11 +531,10 @@ function renderContent() {
       const routeLbl  = feed.source === 'passio' ? (feed.route_label || 'Shuttle')
                       : feed.source === 'metra'  ? (feed.route_label || 'Metra Electric')
                       : `Route ${feed.route}`;
-      const rowDesc   = routeLbl + (feed.direction ? ', ' + feed.direction : '');
       html += '<div class="route-row">';
       if (routeLbl)       html += `<span class="route-lbl">${routeIcon}&nbsp;${routeLbl}</span>`;
       if (feed.direction) html += `<span class="dir-lbl">${feed.direction}</span>`;
-      html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}" data-lbl="${rowDesc}" aria-live="polite" aria-label="${rowDesc}: loading"><span class="card-status" aria-hidden="true">…</span></div>`;
+      html += `<div class="arrivals" id="row-${feedIdx}" data-idx="${feedIdx}"><span class="visually-hidden">Loading</span><span class="card-status" aria-hidden="true">…</span></div>`;
       html += '</div>';
       feedIdx++;
     }
@@ -550,19 +560,13 @@ function setRowArrivals(i, arrivals) {
   el.dataset.resolved = '1';
   el.dataset.hasService = arrivals.length ? '1' : '0';
 
-  const prefix = el.dataset.lbl ? el.dataset.lbl + ': ' : '';
-
   if (!arrivals.length) {
-    el.setAttribute('aria-label', prefix + 'no service');
-    el.innerHTML = '<span class="no-arr" aria-hidden="true">—</span>';
+    el.innerHTML = '<span class="visually-hidden">No service</span><span class="no-arr" aria-hidden="true">—</span>';
     maybeCollapseGroup(el);
     return;
   }
 
-  const summary = arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
-  el.setAttribute('aria-label', prefix + summary);
-
-  el.innerHTML = arrivals.map(({ m, approx, loop }) => {
+  el.innerHTML = `<span class="visually-hidden">${arrivalSummary(arrivals)}</span>` + arrivals.map(({ m, approx, loop }) => {
     if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
     const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
     const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
@@ -570,6 +574,10 @@ function setRowArrivals(i, arrivals) {
   }).join('');
 
   maybeCollapseGroup(el);
+}
+
+function arrivalSummary(arrivals) {
+  return arrivals.map(({ m }) => m <= 0 ? 'Due' : `${m} min`).join(', ');
 }
 
 function maybeCollapseGroup(rowEl) {
@@ -587,9 +595,7 @@ function setRowErr(i, msg) {
   if (!el) return;
   el.dataset.resolved = '1';
   el.dataset.hasService = '1'; // error = don't collapse
-  const prefix = el.dataset.lbl ? el.dataset.lbl + ': ' : '';
-  el.setAttribute('aria-label', prefix + 'error — ' + msg);
-  el.innerHTML = `<span class="card-err">${msg}</span>`;
+  el.innerHTML = `<span class="card-err"><span class="visually-hidden">Error: </span>${msg}</span>`;
   maybeCollapseGroup(el);
 }
 
@@ -1029,8 +1035,21 @@ async function doAlerts(tab) {
   }
 }
 
+// ── Screen reader announcements ───────────────────────────────────────────────
+// One shared role="status" region instead of many live regions. Clearing first
+// lets an identical message be re-announced; the delay also debounces typing.
+let _announceTimer;
+function announce(msg, delay = 100) {
+  const el = document.getElementById('sr-status');
+  if (!el) return;
+  clearTimeout(_announceTimer);
+  el.textContent = '';
+  _announceTimer = setTimeout(() => { el.textContent = msg; }, delay);
+}
+
 // ── Refresh logic ─────────────────────────────────────────────────────────────
-async function doRefresh() {
+// manual = true only for the refresh button; the 30s auto-refresh stays silent to screen readers
+async function doRefresh(manual = false) {
   clearTimeout(rfTimer);
   clearInterval(cdTimer);
   document.getElementById('refresh-cd').textContent = '';
@@ -1040,6 +1059,7 @@ async function doRefresh() {
 
   if (tab.type === 'cta-alerts') {
     await doAlerts(tab);
+    if (manual) announce('Alerts updated');
     scheduleNext();
     return;
   }
@@ -1047,7 +1067,7 @@ async function doRefresh() {
   if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
     const inp          = document.getElementById('stop-inp');
     const inRouteSearch = !document.getElementById('search-dir-row')?.hidden;
-    if (inp?.value.trim() && !inRouteSearch) doStop();
+    if (inp?.value.trim() && !inRouteSearch) doStop({ quiet: !manual });
     scheduleNext();
     return;
   }
@@ -1147,6 +1167,7 @@ async function doRefresh() {
     }
   }
 
+  if (manual) announce('Arrivals updated');
   scheduleNext();
 }
 
@@ -1158,7 +1179,7 @@ function scheduleNext() {
     if (secs <= 0) clearInterval(localTimer);
   }, 1000);
   cdTimer = localTimer;
-  rfTimer = setTimeout(doRefresh, 30_000);
+  rfTimer = setTimeout(() => doRefresh(), 30_000);
 }
 
 document.addEventListener('visibilitychange', () => {
@@ -1200,19 +1221,22 @@ function renderStopETAs(res, inp, preds) {
       if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}</span>`;
       return `<span class="chip" aria-hidden="true">${m}</span>`;
     }).join('');
+    const summary = r.arrivals.length ? arrivalSummary(r.arrivals.slice(0, 3)) : 'No predictions';
     return `<div class="stop-card" role="listitem">
       <div class="stop-name">${ICON_BUS}&nbsp;Route ${r.rt} — ${r.des}</div>
       <div class="route-rows"><div class="route-row">
         <span class="dir-lbl">${r.dir}</span>
-        <div class="arrivals">${chips}</div>
+        <div class="arrivals"><span class="visually-hidden">${summary}</span>${chips}</div>
       </div></div>
     </div>`;
   }).join('') + `</div>`;
 
   res.innerHTML = headingHtml + saveHtml + cardsHtml;
+  const n = Object.keys(byRoute).length;
+  return `${stopName}: ${n} route${n === 1 ? '' : 's'}`;
 }
 
-async function doStop() {
+async function doStop({ quiet = false } = {}) {
   const inp = document.getElementById('stop-inp').value.trim();
   const res = document.getElementById('stop-results');
   if (!inp) return;
@@ -1235,11 +1259,13 @@ async function doStop() {
   ]);
 
   if (preds?.length) {
-    renderStopETAs(res, inp, preds);
+    const msg = renderStopETAs(res, inp, preds);
+    if (!quiet) announce(msg);
   } else if (routeOk) {
     res.innerHTML = '';
   } else {
     res.innerHTML = `<p class="card-err">No route or stop found for "${esc(inp)}".</p>`;
+    if (!quiet) announce(`No route or stop found for ${inp}`);
   }
 }
 
@@ -1372,17 +1398,20 @@ function stopListKeydown(e) {
 function renderStopSearchList(stops) {
   _stopCursorIdx = 0;
   const list = document.getElementById('search-stop-list');
+  announce(stops.length ? `${stops.length} stop${stops.length === 1 ? '' : 's'}` : 'No matching stops', 400);
   if (!stops.length) {
+    list.removeAttribute('role'); // a bare message isn't a list
     list.innerHTML = '<p class="card-status" style="padding:8px 4px">No matching stops.</p>';
     list.hidden = false;
     return;
   }
+  list.setAttribute('role', 'list');
   list.innerHTML = stops.map((s, i) =>
-    `<button class="search-stop-item" role="listitem" tabindex="${i === 0 ? '0' : '-1'}"
+    `<div role="listitem"><button class="search-stop-item" tabindex="${i === 0 ? '0' : '-1'}"
       data-stpid="${esc(s.stpid)}" data-stpnm="${esc(s.stpnm)}" onclick="selectSearchStop(this)">
       <span class="search-stop-name">${esc(s.stpnm)}</span>
       <span class="search-stop-id">#${esc(s.stpid)}</span>
-    </button>`
+    </button></div>`
   ).join('');
   list.hidden = false;
 }
