@@ -21,7 +21,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - **Config:** JSON pasted into the app on first visit → stored in localStorage under key `transit_cfg`
 - **Hosting:** GitHub Pages (push `index.html` to repo root, enable Pages)
 - **To update config:** hit "Config" button in the app header, paste new JSON, hit Load
-- **localStorage keys:** `transit_cfg` (full config), `transit_stops` (saved stops list, JSON array), `transit_tab` (last active tab index + timestamp, restored on load if < 30 min old)
+- **localStorage keys:** `transit_cfg` (full config), `transit_stops` (saved favorites, JSON array of `{id, label}`; `id` is a stop or `stop.route`), `transit_tab` (last active tab index + timestamp, restored on load if < 30 min old)
 - **Auto-refresh:** fetches on tab switch and every 30 s; pauses automatically when the browser tab is hidden and resumes immediately on visibility
 - **Debug panel:** each tab has a collapsible Debug section at the bottom showing the raw parsed feed data for the last refresh — useful for verifying stop IDs and diagnosing missing arrivals. See [debug-guide.md](debug-guide.md) for annotated examples.
 
@@ -31,6 +31,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - Must be mobile screen responsive.
 - Must have or be in dark mode for outdoor and night usage. Optimized for OLED: page and card backgrounds are pure black (`#000`); cards are separated by a border rather than a fill.
 - Must be focused and simple.
+- Interactive elements (buttons, inputs, pills) use pill corners; cards and ETA chips keep rounded-rectangle corners so information doesn't look tappable.
 
 ## Stop IDs and route codes
 
@@ -108,9 +109,9 @@ Optional fields:
 - `source_icon` on a `cta-alerts` tab — emoji icon shown in the badge. Auto-detected from `source_label` (`"UGo"` → 🚐, otherwise 🚌); override if needed.
 - `loop_last_stop` + `loop_offset_min` on a Passio feed entry — for stops that are early in a loop route and therefore rarely appear as a future stop in the GTFS-RT feed. Set `loop_last_stop` to the stop ID of the last stop on the loop (the stop reliably present in all active trips), and `loop_offset_min` to the travel time in minutes from that last stop back around to your target stop. The app will query the last stop instead and add the offset. Measure `loop_offset_min` from riding the route. Example: `"loop_last_stop": "8591", "loop_offset_min": 7`.
 - `destination_stop_id` on a `metra` feed entry — filters by direction. Only trips that still have this stop in their future stops (after the target stop) are shown. Use `"MILLENNIUM"` for inbound trains and `"UNIVERSITY"`, `"BLUEISLAND"`, or `"93RD-SC"` for outbound by branch. Omit to show both directions.
-- `group` on a stop — stops sharing the same group string collapse into one card. Useful when a single physical location has different stop IDs across transit systems (e.g. the CTA and Passio stops at Roosevelt Station).
+- Each entry in `stops` is one card with its own `label`, and its `feeds` may mix stop IDs and sources. Use this to combine a physical location that has different stop IDs across systems (e.g. the CTA and Passio stops at Roosevelt Station) into one custom stop.
 - Multiple CTA feeds with the same `stop_id` in one stop are batched into a single API request.
-- `stop_favorites` on the `cta-stop` tab — pre-populate the saved stops list. Merged into localStorage on config load; UI-added stops are appended. Cap is 6 total.
+- `stop_favorites` on the `cta-stop` tab — pre-populate the saved favorites. `id` is a stop (`"1591"`) or a stop narrowed to one route (`"1591.4"`); `label` is free text. Merged into localStorage on config load; config labels overwrite labels of already-saved favorites with the same `id`; UI-added favorites are appended. Cap is 6 total.
 
 ```json
 {
@@ -118,14 +119,19 @@ Optional fields:
   "type": "cta-stop",
   "stop_favorites": [
     { "id": "2376", "label": "State & Roosevelt" },
-    { "id": "14760", "label": "Michigan & 16th NB" }
+    { "id": "14760.4", "label": "Route 4 to work" }
   ]
 }
 ```
 
 Tab types:
 - Default (omit `type`): list of `stops`, each containing a `feeds` array of Passio or CTA entries
-- `"type": "cta-stop"`: ad-hoc stop lookup widget. The search input accepts a stop ID (any number, e.g. `316`, `14760`) or a route code (e.g. `4`, `X9`, `192`). Letter-containing input is treated as a route code only; pure-digit input fires both APIs in parallel — direction pills appear if the number is a valid route, ETA cards appear if it is a valid stop, and both can appear simultaneously if the number happens to be both.
+- `"type": "cta-stop"`: ad-hoc stop lookup. The search bar sits at the bottom of every tab, next to the refresh button; typing on another tab jumps to this tab. It accepts:
+  - a stop ID (e.g. `1591`): one card for the stop with all its lines. Tapping a route pill narrows the card to that line and the search changes to `1591.4`.
+  - a route code (e.g. `X4`): pick a direction, then a stop; the card shows only that line (`15148.X4`), with "No service right now" if it isn't running.
+  - `stop.route` (e.g. `1591.4`): the stop narrowed to one line. Clicking the stop name returns to all lines.
+  - Pure digits could be a stop or a route, so both lookups run; direction pills and the stop card can appear together.
+  Favorites (above the results) save whatever the card shows, a stop or a `stop.route`. Refresh re-fetches the card on screen.
 - `"type": "cta-alerts"`: CTA service bulletins from `getservicebulletins`. Optional `routes` array filters to specific routes; omit for all alerts.
 
 ```json
@@ -224,7 +230,8 @@ Tab types:
 
 - **Route-code search on the CTA Stop tab** — the search input now accepts a route code in addition to a stop ID. For pure-digit input both `getdirections` and `getpredictions` fire in parallel (a number like `316` is a valid stop ID but could also be a route); direction pills appear if a matching route is found, ETA cards appear if a matching stop is found. Letter-containing input (e.g. `X4`) is route-only. Stop list responses are cached for 5 minutes to avoid redundant API calls when toggling directions.
 
-- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab uses `top=10`.
+- **Line missing when not running (e.g. X4)** — picking a stop from a route's stop list showed every line at the stop, and a line with no predictions simply wasn't there. Picking a stop now narrows the card to that line (`stop.route`), which always shows a row for it, reading "No service right now" when the CTA returns *No service scheduled*.
+- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab also uses `top=50` (it used `top=10`, which could drop infrequent lines from the all-lines card).
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
 - **Passio vehicle positions debug showing `null`** — `fetchPassioVehicles` was swallowing errors with `.catch(() => null)`. Fixed: error is captured and surfaced in the debug block with the response size, content type, and decode message.
 

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="theme-color" content="#000000">
@@ -46,7 +46,7 @@
     #cfg-err { color: #ff453a; font-size: 13px; display: none; max-width: 480px; }
 
     .primary-btn {
-      background: #0066e0; color: #fff; border: none; border-radius: 12px;
+      background: #0066e0; color: #fff; border: none; border-radius: 999px;
       padding: 14px 0; font-size: 17px; font-weight: 600; cursor: pointer;
       width: 100%; max-width: 480px;
     }
@@ -70,19 +70,52 @@
     #hdr-right { display: flex; align-items: center; gap: 10px; }
     #cfg-link {
       background: none; border: none; color: #8e8e93; cursor: pointer;
-      padding: 6px; border-radius: 8px; display: flex; align-items: center;
+      padding: 6px; border-radius: 50%; display: flex; align-items: center;
     }
     #cfg-link svg { width: 18px; height: 18px; fill: currentColor; }
     #cfg-link:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 
-    #refresh-wrap {
-      position: fixed; bottom: 24px; right: 20px; z-index: 100;
-      display: flex; flex-direction: column; align-items: center; gap: 6px;
+    /* Bottom bar: search + refresh, on every tab */
+    #bottom-bar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 100;
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 16px calc(8px + env(safe-area-inset-bottom));
+      background: rgba(0,0,0,0.88);
+      backdrop-filter: saturate(180%) blur(20px);
+      -webkit-backdrop-filter: saturate(180%) blur(20px);
+      border-top: 0.5px solid #3a3a3c;
     }
-    #refresh-cd { font-size: 11px; color: #8e8e93; min-width: 28px; text-align: center; }
+
+    #search-form {
+      flex: 1; min-width: 0; height: 48px;
+      display: flex; align-items: center;
+      background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 999px;
+    }
+    #search-form:focus-within { border-color: #0a84ff; }
+    #stop-inp {
+      flex: 1; min-width: 0; height: 100%;
+      background: none; border: none; border-radius: 999px;
+      color: #fff; font-size: 17px; padding: 0 4px 0 18px;
+    }
+    #stop-inp:focus { outline: none; }
+    #stop-inp::placeholder { color: #98989d; }
+    #stop-go {
+      flex-shrink: 0; width: 44px; height: 44px; margin-right: 1px;
+      background: none; border: none; border-radius: 50%; color: #fff; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #stop-go svg { width: 20px; height: 20px; fill: currentColor; }
+    #stop-go:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; }
+    #stop-go:active { opacity: 0.7; }
+
+    #refresh-wrap {
+      margin-left: auto;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    #refresh-cd { font-size: 11px; color: #8e8e93; min-width: 28px; min-height: 13px; text-align: center; }
 
     #refresh-fab {
-      width: 54px; height: 54px; border-radius: 50%;
+      width: 48px; height: 48px; border-radius: 50%;
       background: #0066e0; border: none; cursor: pointer; color: #fff;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 4px 16px rgba(0,0,0,0.5);
@@ -106,7 +139,7 @@
     .tab:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; }
 
     /* Content */
-    #content { flex: 1; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; }
+    #content { flex: 1; padding: 12px 16px calc(100px + env(safe-area-inset-bottom)); display: flex; flex-direction: column; gap: 10px; }
 
     /* Cards */
     .stop-card {
@@ -179,23 +212,9 @@
 
     /* CTA Stop */
     #stop-wrap { display: flex; flex-direction: column; gap: 12px; }
-    #stop-row  { display: flex; gap: 8px; }
-
-    #stop-inp {
-      flex: 1; background: #1c1c1e; border: 1.5px solid #3a3a3c; border-radius: 10px;
-      color: #fff; font-size: 17px; padding: 10px 14px;
-    }
-    #stop-inp:focus { outline: none; border-color: #0a84ff; }
-
-    #stop-go {
-      background: #0066e0; border: none; border-radius: 10px;
-      color: #fff; cursor: pointer; font-size: 17px; font-weight: 600;
-      padding: 10px 18px;
-    }
-    #stop-go:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
-    #stop-go:active { opacity: 0.8; }
 
     #stop-results { display: flex; flex-direction: column; gap: 10px; }
+    #stop-results:empty { display: none; }
 
     #stop-saved { display: flex; flex-wrap: wrap; gap: 8px; }
     .stop-fav-wrap { display: inline-flex; align-items: center; background: #2c2c2e; border-radius: 20px; overflow: hidden; }
@@ -203,10 +222,29 @@
     .stop-fav:active { opacity: 0.7; }
     .stop-fav:focus-visible { outline: 2px solid #0a84ff; outline-offset: -2px; border-radius: 20px; }
     .stop-fav-rm { background: none; border: none; color: #98989d; cursor: pointer; font-size: 14px; padding: 6px 10px 6px 2px; line-height: 1; }
-    .stop-results-hd { display: flex; align-items: baseline; gap: 6px; padding-bottom: 4px; margin: 0; font-weight: normal; }
-    .stop-results-name { color: #fff; font-size: 15px; font-weight: 600; }
-    .stop-results-id { color: #78787c; font-size: 12px; }
-    .stop-save-btn { background: none; border: none; color: #0a84ff; cursor: pointer; font-size: 13px; padding: 4px 0 8px; display: block; text-align: left; }
+    .stop-card-hd { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; margin-bottom: 10px; }
+    .stop-card-hd .stop-name { margin: 0; }
+    .stop-id { color: #78787c; font-size: 12px; }
+    /* Stop name returns to all lines when one line is selected; kept discreet on purpose */
+    .stop-name-btn {
+      background: none; border: none; padding: 0; color: inherit; font: inherit;
+      cursor: pointer; text-align: left;
+    }
+    .stop-name-btn:hover { text-decoration: underline; text-underline-offset: 3px; }
+    .stop-name-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 4px; }
+    .route-pick {
+      background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 999px;
+      color: #fff; cursor: pointer; font-size: 13px; font-weight: 500;
+      padding: 4px 11px; white-space: nowrap;
+    }
+    .route-pick:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+    .route-pick:active { opacity: 0.7; }
+    .stop-save-btn {
+      background: #2c2c2e; border: none; border-radius: 999px; color: #fff; cursor: pointer;
+      font-size: 13px; padding: 6px 12px; margin-top: 12px;
+    }
+    .stop-save-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+    .stop-save-note { font-size: 13px; margin-top: 12px; }
 
     [hidden] { display: none !important; }
     #search-dir-row { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -218,22 +256,21 @@
     .dir-pill:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
 
     #search-filter-inp {
-      width: 100%; background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 8px;
-      color: #fff; font-size: 15px; padding: 8px 12px;
+      width: 100%; background: #2c2c2e; border: 1.5px solid #3a3a3c; border-radius: 999px;
+      color: #fff; font-size: 15px; padding: 8px 16px;
     }
     #search-filter-inp:focus { outline: none; border-color: #0a84ff; }
     #search-filter-inp::placeholder { color: #98989d; }
 
     #search-stop-list {
-      display: flex; flex-direction: column; max-height: 260px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 2px; max-height: 260px; overflow-y: auto;
     }
     .search-stop-item {
       display: flex; justify-content: space-between; align-items: center;
-      background: none; border: none; border-bottom: 0.5px solid #2c2c2e;
+      background: none; border: none; border-radius: 999px;
       color: #fff; cursor: pointer; font-size: 14px; gap: 8px;
-      padding: 9px 4px; text-align: left; width: 100%;
+      padding: 9px 14px; text-align: left; width: 100%;
     }
-    #search-stop-list > [role="listitem"]:last-child .search-stop-item { border-bottom: none; }
     .search-stop-item:hover, .search-stop-item:focus { background: #2c2c2e; outline: none; }
     .search-stop-name { flex: 1; }
     .search-stop-id { color: #98989d; font-size: 12px; white-space: nowrap; }
@@ -285,11 +322,21 @@
   </header>
   <main id="content"></main>
   <div id="sr-status" class="visually-hidden" role="status"></div>
-  <div id="refresh-wrap">
-    <span id="refresh-cd" aria-hidden="true"></span>
-    <button id="refresh-fab" onclick="doRefresh(true)" aria-label="Refresh arrivals" title="Refresh arrivals">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
-    </button>
+  <div id="bottom-bar">
+    <form id="search-form" role="search" onsubmit="event.preventDefault(); doStop()">
+      <label for="stop-inp" class="visually-hidden">CTA stop or route</label>
+      <input id="stop-inp" type="text" enterkeyhint="search" autocomplete="off" autocapitalize="characters" spellcheck="false"
+        placeholder="Stop or route, e.g. 1591.4" oninput="onSearchInput()">
+      <button id="stop-go" type="submit" aria-label="Search" title="Search">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" aria-hidden="true"><path d="M480 272C480 317.9 465.1 360.3 440 394.7L566.6 521.4C579.1 533.9 579.1 554.2 566.6 566.7C554.1 579.2 533.8 579.2 521.3 566.7L394.7 440C360.3 465.1 317.9 480 272 480C157.1 480 64 386.9 64 272C64 157.1 157.1 64 272 64C386.9 64 480 157.1 480 272zM272 416C351.5 416 416 351.5 416 272C416 192.5 351.5 128 272 128C192.5 128 128 192.5 128 272C128 351.5 192.5 416 272 416z"/></svg>
+      </button>
+    </form>
+    <div id="refresh-wrap">
+      <button id="refresh-fab" onclick="doRefresh(true)" aria-label="Refresh arrivals" title="Refresh arrivals">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" aria-hidden="true"><path d="M256 64c-56.8 0-107.9 24.7-143.1 64l47.1 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 192c-17.7 0-32-14.3-32-32L0 32C0 14.3 14.3 0 32 0S64 14.3 64 32l0 54.7C110.9 33.6 179.5 0 256 0 397.4 0 512 114.6 512 256S397.4 512 256 512c-87 0-163.9-43.4-210.1-109.7-10.1-14.5-6.6-34.4 7.9-44.6s34.4-6.6 44.6 7.9c34.8 49.8 92.4 82.3 157.6 82.3 106 0 192-86 192-192S362 64 256 64z"/></svg>
+      </button>
+      <span id="refresh-cd" aria-hidden="true"></span>
+    </div>
   </div>
 </div>
 
@@ -361,6 +408,12 @@ let rfTimer          = null;
 let lastPassio       = null;
 let lastMetra        = null;
 let _pendingStopSave = null;
+let _stopQuery       = null; // {stop, line} of the stop card on screen; refresh re-fetches it
+let _stopSeq         = 0;    // bumped per lookup so a slow response can't overwrite a newer one
+const _stopNames     = new Map(); // stpid → stpnm, from route stop lists and predictions
+
+const isStopTab  = t => t?.type === 'cta-stop' || t?.type === 'cta-spot';
+const stopTabIdx = () => cfg.tabs.findIndex(isStopTab);
 
 // ── Route icons (inline SVG; files live in img/ for reference) ────────────────
 const _svgA = 'xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 640" width="1em" height="1em" style="vertical-align:-0.125em;flex-shrink:0" fill="currentColor" aria-hidden="true"';
@@ -413,6 +466,7 @@ function startApp() {
     localStorage.setItem('transit_stops', localStorage.getItem('transit_spots'));
   localStorage.removeItem('transit_spots');
   syncStopFavorites();
+  document.getElementById('search-form').hidden = stopTabIdx() === -1;
   buildTabs();
   let initTab = 0;
   try {
@@ -481,17 +535,13 @@ function renderContent() {
     return;
   }
 
-  if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
+  if (isStopTab(tab)) {
+    // The search input lives in the bottom bar; the route flow sits last so it stays next to it
     el.innerHTML = `
       <div id="stop-wrap">
         <h2 class="visually-hidden">${esc(tab.label)}</h2>
-        <div id="stop-row">
-          <label for="stop-inp" class="visually-hidden">CTA stop number or route</label>
-          <input id="stop-inp" type="text" inputmode="text"
-            placeholder="Stop number or route (e.g. 4, X9)"
-            oninput="clearRouteSearch()" onkeydown="if(event.key==='Enter')doStop()">
-          <button id="stop-go" onclick="doStop()">Go</button>
-        </div>
+        <div id="stop-saved" role="list" aria-label="Saved stops" onkeydown="savedFavsKeydown(event)"></div>
+        <div id="stop-results"></div>
         <div id="search-dir-row" hidden role="group" aria-live="polite" aria-label="Route directions"></div>
         <div id="search-filter-row" hidden>
           <label for="search-filter-inp" class="visually-hidden">Filter stops</label>
@@ -499,8 +549,6 @@ function renderContent() {
             oninput="filterStops()" onkeydown="filterInpKeydown(event)">
         </div>
         <div id="search-stop-list" hidden role="list" aria-label="Stops on route" onkeydown="stopListKeydown(event)"></div>
-        <div id="stop-saved" role="list" aria-label="Saved stops" onkeydown="savedFavsKeydown(event)"></div>
-        <div id="stop-results"></div>
       </div>`;
     renderSavedStops();
     if (!window.matchMedia('(pointer: coarse)').matches)
@@ -566,14 +614,16 @@ function setRowArrivals(i, arrivals) {
     return;
   }
 
-  el.innerHTML = `<span class="visually-hidden">${arrivalSummary(arrivals)}</span>` + arrivals.map(({ m, approx, loop }) => {
-    if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
-    const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
-    const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
-    return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
-  }).join('');
+  el.innerHTML = `<span class="visually-hidden">${arrivalSummary(arrivals)}</span>` + arrivals.map(chipHtml).join('');
 
   maybeCollapseGroup(el);
+}
+
+function chipHtml({ m, approx, loop }) {
+  if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
+  const cls = (m <= 5 ? 'chip soon' : 'chip') + (loop ? ' loop' : '');
+  const etaHtml = approx != null ? `<span class="eta" aria-hidden="true">[${approx}]</span>` : '';
+  return `<span class="${cls}" aria-hidden="true">${m}${etaHtml}</span>`;
 }
 
 function arrivalSummary(arrivals) {
@@ -828,13 +878,16 @@ function getSavedStops() {
 }
 
 function syncStopFavorites() {
-  const tab  = cfg?.tabs?.find(t => t.type === 'cta-spot' || t.type === 'cta-stop');
-  const favs = tab?.stop_favorites ?? tab?.spot_favorites;
-  if (!favs?.length) return;
-  const existing   = getSavedStops();
+  const tab  = cfg?.tabs?.find(isStopTab);
+  const favs = (tab?.stop_favorites ?? tab?.spot_favorites ?? [])
+    .filter(s => s.id).map(s => ({ id: String(s.id), label: s.label || String(s.id) }));
+  if (!favs.length) return;
+  // Config labels win, so renaming a favorite in the config takes effect for already-saved stops
+  const cfgById  = new Map(favs.map(s => [s.id, s]));
+  const existing = getSavedStops().map(s => cfgById.get(s.id) ?? s);
   const existingIds = new Set(existing.map(s => s.id));
   const merged = [
-    ...favs.filter(s => s.id && !existingIds.has(s.id)),
+    ...favs.filter(s => !existingIds.has(s.id)),
     ...existing,
   ].slice(0, 6);
   localStorage.setItem('transit_stops', JSON.stringify(merged));
@@ -895,9 +948,12 @@ function savedFavsKeydown(e) {
   }
 }
 
-function loadStop(id) {
-  const inp = document.getElementById('stop-inp');
-  if (inp) { inp.value = id; doStop(); }
+// id is "STOP" or "STOP.ROUTE". focusSel moves focus into the new card when the clicked
+// control is replaced by the re-render.
+async function loadStop(id, focusSel) {
+  document.getElementById('stop-inp').value = id;
+  await doStop();
+  if (focusSel) document.querySelector(focusSel)?.focus();
 }
 
 // ── CTA via CORS proxy ────────────────────────────────────────────────────────
@@ -931,12 +987,14 @@ async function fetchCTABatch(stopIds, routes) {
   return preds;
 }
 
-async function fetchCTARaw(stopId) {
+// Returns [] when the stop exists but nothing is running (e.g. X4 outside rush hour)
+async function fetchCTARaw(stopId, route) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
     throw new Error('No CTA API key — add one to your config');
   }
 
-  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), top: '10', format: 'json' });
+  const params = new URLSearchParams({ key: cfg.cta_api_key, stpid: String(stopId), top: '50', format: 'json' });
+  if (route) params.set('rt', route);
   const res    = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
@@ -944,7 +1002,11 @@ async function fetchCTARaw(stopId) {
   const btr   = data?.['bustime-response'];
   const preds = btr?.prd || [];
   const errs  = btr?.error;
-  if (!preds.length && errs?.length) throw new Error(errs[0]?.msg || 'CTA error');
+  if (!preds.length && errs?.length) {
+    const msg = errs[0]?.msg || 'CTA error';
+    if (CTA_NO_SVC.has(msg)) return [];
+    throw new Error(msg);
+  }
   return preds;
 }
 
@@ -1064,10 +1126,8 @@ async function doRefresh(manual = false) {
     return;
   }
 
-  if (tab.type === 'cta-spot' || tab.type === 'cta-stop') {
-    const inp          = document.getElementById('stop-inp');
-    const inRouteSearch = !document.getElementById('search-dir-row')?.hidden;
-    if (inp?.value.trim() && !inRouteSearch) doStop({ quiet: !manual });
+  if (isStopTab(tab)) {
+    if (_stopQuery) showStop(_stopQuery.stop, _stopQuery.line, { quiet: !manual });
     scheduleNext();
     return;
   }
@@ -1192,83 +1252,133 @@ document.addEventListener('visibilitychange', () => {
 });
 
 // ── CTA Stop check ────────────────────────────────────────────────────────────
-function renderStopETAs(res, inp, preds) {
-  const stopName     = preds[0]?.stpnm || `Stop ${inp}`;
-  const safeStopName = esc(stopName);
-  const saved        = getSavedStops();
-  const isSaved      = saved.some(s => s.id === inp);
-  const atCap        = saved.length >= 6;
-  _pendingStopSave = isSaved || atCap ? null : { id: inp, label: stopName };
-  const saveHtml = isSaved  ? ''
-    : atCap ? '<p class="card-status" style="font-size:13px;padding:0 0 8px">Favorites full (6) — remove one to add more.</p>'
-    : `<button class="stop-save-btn" onclick="commitStopSave()">☆ Save "${safeStopName}"</button>`;
+// Search syntax: "1591" is a stop, "X4" a route, "1591.4" a stop narrowed to one route.
+// Stop IDs are digits only, so pure digits may be either and both lookups run.
+const STOP_LINE_RE = /^(\d+)\.([A-Z0-9]+)$/;
 
-  const byRoute = {};
-  for (const p of preds) {
-    if (!byRoute[p.rt]) byRoute[p.rt] = { rt: p.rt, des: p.des, dir: p.rtdir, arrivals: [] };
-    const m = p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10);
-    if (!isNaN(m)) byRoute[p.rt].arrivals.push({ m });
-  }
-
-  const headingHtml = `<h3 class="stop-results-hd">
-    <span class="stop-results-name">${esc(stopName)}</span>
-    <span class="stop-results-id">#${esc(inp)}</span>
-  </h3>`;
-
-  const cardsHtml = `<div role="list">` + Object.values(byRoute).map(r => {
-    const chips = r.arrivals.slice(0, 3).map(({ m }) => {
-      if (m <= 0) return '<span class="chip due" aria-hidden="true">Due</span>';
-      if (m <= 5) return `<span class="chip soon" aria-hidden="true">${m}</span>`;
-      return `<span class="chip" aria-hidden="true">${m}</span>`;
-    }).join('');
-    const summary = r.arrivals.length ? arrivalSummary(r.arrivals.slice(0, 3)) : 'No predictions';
-    return `<div class="stop-card" role="listitem">
-      <div class="stop-name">${ICON_BUS}&nbsp;Route ${r.rt} — ${r.des}</div>
-      <div class="route-rows"><div class="route-row">
-        <span class="dir-lbl">${r.dir}</span>
-        <div class="arrivals"><span class="visually-hidden">${summary}</span>${chips}</div>
-      </div></div>
-    </div>`;
-  }).join('') + `</div>`;
-
-  res.innerHTML = headingHtml + saveHtml + cardsHtml;
-  const n = Object.keys(byRoute).length;
-  return `${stopName}: ${n} route${n === 1 ? '' : 's'}`;
+// Typing on any tab jumps to the CTA Stop tab; the bar lives outside #content, so focus stays put
+function onSearchInput() {
+  const i = stopTabIdx();
+  if (i !== -1 && i !== activeTab) switchTab(i);
+  clearRouteSearch();
 }
 
-async function doStop({ quiet = false } = {}) {
-  const inp = document.getElementById('stop-inp').value.trim();
-  const res = document.getElementById('stop-results');
-  if (!inp) return;
+async function doStop() {
+  const inpEl = document.getElementById('stop-inp');
+  const q     = inpEl.value.trim().toUpperCase();
+  const res   = document.getElementById('stop-results');
+  if (!q || !res) return;
+  inpEl.value = q;
 
   clearRouteSearch();
-  res.innerHTML = '<p class="card-status">Loading…</p>';
+  _stopQuery = null;
 
-  if (/[a-zA-Z]/.test(inp)) {
-    // Letters → can only be a route code (stop IDs are purely numeric)
+  const m = q.match(STOP_LINE_RE);
+  if (m) { await showStop(m[1], m[2]); return; }
+
+  if (/[A-Z]/.test(q)) {
+    // Letters → can only be a route code
+    _stopSeq++; // drop any stop lookup still in flight
     res.innerHTML = '';
-    await searchRoute(inp);
+    await searchRoute(q);
     return;
   }
 
-  // Pure digits: could be a route (e.g. "4", "192") or a stop (e.g. "316", "2530")
-  // Fire both in parallel; show whatever returns useful data
-  const [routeOk, preds] = await Promise.all([
-    searchRoute(inp, { silent: true }),
-    fetchCTARaw(inp).catch(() => null),
+  res.innerHTML = '<p class="card-status">Loading…</p>';
+  const seq = _stopSeq + 1; // the value showStop is about to take
+  const [routeOk, stopOk] = await Promise.all([
+    searchRoute(q, { silent: true }),
+    showStop(q, null, { silent: true }),
   ]);
-
-  if (preds?.length) {
-    const msg = renderStopETAs(res, inp, preds);
-    if (!quiet) announce(msg);
-  } else if (routeOk) {
-    res.innerHTML = '';
-  } else {
-    res.innerHTML = `<p class="card-err">No route or stop found for "${esc(inp)}".</p>`;
-    if (!quiet) announce(`No route or stop found for ${inp}`);
-  }
+  if (stopOk || seq !== _stopSeq) return;
+  if (routeOk) { res.innerHTML = ''; return; }
+  res.innerHTML = `<p class="card-err">No route or stop found for "${esc(q)}".</p>`;
+  announce(`No route or stop found for ${q}`);
 }
 
+// Fetches and renders one stop card. Returns true if the stop was found.
+// silent: leave error display to the caller. quiet: skip the screen reader summary.
+async function showStop(stop, line, { quiet = false, silent = false } = {}) {
+  const seq = ++_stopSeq;
+  const res = document.getElementById('stop-results');
+  let preds;
+  try {
+    preds = await fetchCTARaw(stop, line);
+    // A line with nothing running returns no predictions, so take the name from the stop's other lines
+    if (!preds.length && line && !_stopNames.has(stop)) {
+      const all = await fetchCTARaw(stop).catch(() => []);
+      if (all[0]) _stopNames.set(stop, all[0].stpnm);
+    }
+  } catch (e) {
+    if (seq !== _stopSeq || silent || !res) return false;
+    const msg = line ? `Stop ${stop}, route ${line}: ${e.message}` : e.message;
+    res.innerHTML = `<p class="card-err">${esc(msg)}</p>`;
+    if (!quiet) announce(msg);
+    return false;
+  }
+  if (seq !== _stopSeq || !res) return false;
+  for (const p of preds) _stopNames.set(String(p.stpid), p.stpnm);
+  _stopQuery = { stop, line };
+  const msg = renderStopCard(res, stop, line, preds);
+  if (!quiet) announce(msg);
+  return true;
+}
+
+// One card per stop. With a line selected, only that line shows (even with no service)
+// and the stop name becomes the way back to all lines.
+function renderStopCard(res, stop, line, preds) {
+  const name  = _stopNames.get(stop) || `Stop ${stop}`;
+  const id    = line ? `${stop}.${line}` : stop;
+  const label = line ? `${name} · ${line}` : name;
+
+  const byRoute = {};
+  if (line) byRoute[line] = { rt: line, des: '', dir: '', arrivals: [] };
+  for (const p of preds) {
+    const r = byRoute[p.rt] ??= { rt: p.rt, des: '', dir: '', arrivals: [] };
+    r.des ||= p.des;
+    r.dir ||= p.rtdir;
+    const m = p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10);
+    if (!isNaN(m)) r.arrivals.push({ m });
+  }
+  const routes = Object.values(byRoute);
+
+  const rowsHtml = routes.map(r => {
+    const rt    = esc(r.rt);
+    const lbl   = `${ICON_BUS}&nbsp;Route ${rt}`;
+    const lblEl = line ? `<span class="route-lbl">${lbl}</span>`
+      : `<button class="route-pick" onclick="loadStop('${esc(stop)}.${rt}', '.stop-name-btn')" aria-label="Route ${rt}, show only this route">${lbl}</button>`;
+    const dir   = [r.dir, r.des].filter(Boolean).map(esc).join(' · ');
+    const arr   = r.arrivals.slice(0, 3);
+    const arrEl = arr.length
+      ? `<span class="visually-hidden">${arrivalSummary(arr)}</span>${arr.map(chipHtml).join('')}`
+      : '<span class="card-status">No service right now</span>';
+    return `<div class="route-row">${lblEl}${dir ? `<span class="dir-lbl">${dir}</span>` : ''}<div class="arrivals">${arrEl}</div></div>`;
+  }).join('');
+
+  const nameEl = line
+    ? `<button class="stop-name-btn" onclick="loadStop('${esc(stop)}', '.route-pick')" title="Show all lines" aria-label="${esc(name)}, show all lines">${esc(name)}</button>`
+    : esc(name);
+
+  const saved   = getSavedStops();
+  const isSaved = saved.some(s => s.id === id);
+  const atCap   = saved.length >= 6;
+  _pendingStopSave = isSaved || atCap ? null : { id, label };
+  const saveHtml = isSaved ? ''
+    : atCap ? '<p class="card-status stop-save-note">Favorites full (6) — remove one to add more.</p>'
+    : `<button class="stop-save-btn" onclick="commitStopSave()">☆ Save "${esc(label)}"</button>`;
+
+  res.innerHTML = `<div class="stop-card">
+    <div class="stop-card-hd"><h3 class="stop-name">${nameEl}</h3><span class="stop-id">#${esc(stop)}</span></div>
+    ${routes.length ? `<div class="route-rows">${rowsHtml}</div>` : '<p class="card-status">No service right now</p>'}
+    ${saveHtml}
+  </div>`;
+
+  if (line) {
+    const a = byRoute[line].arrivals.slice(0, 3);
+    return `${name}, route ${line}: ${a.length ? arrivalSummary(a) : 'no service right now'}`;
+  }
+  return `${name}: ${routes.length} route${routes.length === 1 ? '' : 's'}`;
+}
 
 // ── CTA Stop search (route → direction → stop) ────────────────────────────────
 let _stopSearchCache = null;
@@ -1344,7 +1454,7 @@ async function selectDir(route, dir) {
       stops = btr?.stops ?? [];
       _routeCacheSet('stops:' + route + ':' + dir, stops);
     }
-    _stopSearchCache = { stops };
+    _stopSearchCache = { stops, route };
     document.getElementById('search-filter-inp').value = '';
     filterRow.hidden = false;
     renderStopSearchList(stops);
@@ -1416,10 +1526,25 @@ function renderStopSearchList(stops) {
   list.hidden = false;
 }
 
+// Picking a stop from a route's list shows that stop narrowed to the route
 function selectSearchStop(btn) {
-  const stopId = btn.dataset.stpid;
-  document.getElementById('stop-inp').value = stopId;
-  doStop();
+  _stopNames.set(btn.dataset.stpid, btn.dataset.stpnm);
+  loadStop(`${btn.dataset.stpid}.${_stopSearchCache.route}`, '.stop-name-btn');
+}
+
+// ── Bottom bar vs on-screen keyboard ──────────────────────────────────────────
+// Chrome on Android resizes the layout for the keyboard (interactive-widget in the
+// viewport meta). iOS Safari only shrinks the visual viewport, leaving a fixed bar
+// behind the keyboard, so lift it by the covered height.
+if (window.visualViewport) {
+  const vv  = window.visualViewport;
+  const bar = document.getElementById('bottom-bar');
+  const placeBar = () => {
+    const covered = window.innerHeight - vv.height - vv.offsetTop;
+    bar.style.transform = covered > 1 ? `translateY(${-covered}px)` : '';
+  };
+  vv.addEventListener('resize', placeBar);
+  vv.addEventListener('scroll', placeBar);
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
