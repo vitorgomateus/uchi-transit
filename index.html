@@ -1203,9 +1203,13 @@ async function doRefresh(manual = false) {
     try {
       if (feed.source === 'passio') {
         if (passioErr) throw new Error(passioErr);
+        // Loop routes: shuttles early in the lap still list this stop directly; the rest
+        // are estimated from the end of the lap. Show both, soonest first.
         const arrivals = feed.loop_last_stop
-          ? getPassioArrivals(passioFeed, feed.route, feed.loop_last_stop)
-              .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0), loop: true }))
+          ? [...getPassioArrivals(passioFeed, feed.route, feed.stop_id),
+             ...getPassioArrivals(passioFeed, feed.route, feed.loop_last_stop)
+               .map(a => ({ ...a, m: a.m + (feed.loop_offset_min || 0), loop: true }))]
+              .sort((a, b) => a.m - b.m).slice(0, 3)
           : getPassioArrivals(passioFeed, feed.route, feed.stop_id);
         setRowArrivals(idx, vehiclesFeed ? addApproxEtas(arrivals, vehiclesFeed, stop, feed.route)
                                          : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop })));
