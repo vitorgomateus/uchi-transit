@@ -1,6 +1,6 @@
 # Debug panel reference
 
-The **Debug** section at the bottom of each tab expands into one collapsible block per data source fetched during the last refresh.
+The **Debug** section at the bottom of each tab expands into one collapsible block per data source fetched during the last refresh. **Copy debug info** copies a plain-text snapshot: the time, what each row shows, the tab's config (API keys are not included) and every block below.
 
 ---
 
@@ -84,48 +84,56 @@ If the debug block shows an error object instead of position data, the fetch fai
 
 ## CTA (…) — stops …
 
-The raw prediction objects returned by the CTA Bus Tracker API, one entry per predicted arrival across all routes in the tab. The label shows which routes and stop IDs were requested, e.g. `CTA (192, 4, X4) — stops 2376, 1595`.
+The CTA Bus Tracker response for every CTA feed in the tab, fetched in one request. The label shows which routes and stop IDs were requested, the prediction count and any error count, e.g. `CTA (192, 4, X4) — stops 316, 1591 — 2, 1 error`.
+
+`errors` is CTA's `error` array. Each entry names the `stpid` and/or `rt` it is about; *No service scheduled* means nothing is running, anything else (e.g. *No data found for parameter*) usually means that route doesn't serve that stop, and the row shows the message. `predictions` holds one object per predicted arrival:
 
 ```json
-[
-  {
-    "tmstmp":      "20250523 14:00",
-    "typ":         "A",
-    "stpnm":       "Roosevelt & Michigan",
-    "stpid":       "2376",
-    "vid":         "8834",
-    "dstp":        1823,
-    "rt":          "192",
-    "rtdd":        "192",
-    "rtdir":       "Southbound",
-    "des":         "Roseland",
-    "prdtm":       "20250523 14:03",
-    "tablockid":   "192 -501",
-    "tatripid":    "1072671",
-    "origtatripno":"259689263",
-    "dly":         false,
-    "prdctdn":     "3",
-    "zone":        ""
-  },
-  {
-    "tmstmp":      "20250523 14:00",
-    "typ":         "A",
-    "stpnm":       "Roosevelt & Michigan",
-    "stpid":       "2376",
-    "vid":         "8901",
-    "dstp":        9144,
-    "rt":          "192",
-    "rtdir":       "Southbound",
-    "des":         "Roseland",
-    "prdtm":       "20250523 14:08",
-    "tablockid":   "192 -502",
-    "tatripid":    "1072682",
-    "origtatripno":"259689271",
-    "dly":         true,
-    "prdctdn":     "8",
-    "zone":        ""
-  }
-]
+{
+  "fetched_at": "2025-05-23T14:00:12.345Z",
+  "errors": [
+    { "stpid": "1591", "rt": "X4", "msg": "No service scheduled" }
+  ],
+  "predictions": [
+    {
+      "tmstmp":      "20250523 14:00",
+      "typ":         "A",
+      "stpnm":       "Roosevelt & State",
+      "stpid":       "316",
+      "vid":         "8834",
+      "dstp":        1823,
+      "rt":          "192",
+      "rtdd":        "192",
+      "rtdir":       "Southbound",
+      "des":         "Roseland",
+      "prdtm":       "20250523 14:03",
+      "tablockid":   "192 -501",
+      "tatripid":    "1072671",
+      "origtatripno":"259689263",
+      "dly":         false,
+      "prdctdn":     "3",
+      "zone":        ""
+    },
+    {
+      "tmstmp":      "20250523 14:00",
+      "typ":         "A",
+      "stpnm":       "Roosevelt & State",
+      "stpid":       "316",
+      "vid":         "8901",
+      "dstp":        9144,
+      "rt":          "192",
+      "rtdir":       "Southbound",
+      "des":         "Roseland",
+      "prdtm":       "20250523 14:08",
+      "tablockid":   "192 -502",
+      "tatripid":    "1072682",
+      "origtatripno":"259689271",
+      "dly":         true,
+      "prdctdn":     "8",
+      "zone":        ""
+    }
+  ]
+}
 ```
 
 | Field | Meaning |
@@ -142,4 +150,4 @@ The raw prediction objects returned by the CTA Bus Tracker API, one entry per pr
 | `des` | Destination (headsign) |
 | `rtdir` | Direction of travel |
 
-**What to check:** If the array is empty but no error appeared, the API returned a "No service scheduled" message (the app silently collapses those rows). If `dly` is `true` on everything, the route is running late. Cross-check `dstp` against `prdctdn` — a bus 5,000 ft away predicting arrival in 1 min is probably a GPS glitch.
+**What to check:** If `predictions` has nothing for your stop + route, look in `errors` for an entry with that `stpid`/`rt`. *No service scheduled* collapses the row; any other message is shown on the row. If `dly` is `true` on everything, the route is running late. Cross-check `dstp` against `prdctdn` — a bus 5,000 ft away predicting arrival in 1 min is probably a GPS glitch.

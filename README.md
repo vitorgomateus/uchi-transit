@@ -118,7 +118,7 @@ Optional fields:
   "label": "CTA Stop",
   "type": "cta-stop",
   "stop_favorites": [
-    { "id": "2376", "label": "State & Roosevelt" },
+    { "id": "316", "label": "Roosevelt & State" },
     { "id": "14760.4", "label": "Route 4 to work" }
   ]
 }
@@ -163,7 +163,7 @@ Tab types:
         {
           "label": "Roosevelt Station",
           "feeds": [
-            { "source": "cta",    "route": "192",  "stop_id": "2376",   "direction": "Southbound" },
+            { "source": "cta",    "route": "192",  "stop_id": "316",    "direction": "Southbound" },
             { "source": "passio", "route": "5704", "stop_id": "132968", "route_label": "Downtown Campus Connector" }
           ]
         }
@@ -231,7 +231,8 @@ Tab types:
 - **Route-code search on the CTA Stop tab** — the search input now accepts a route code in addition to a stop ID. For pure-digit input both `getdirections` and `getpredictions` fire in parallel (a number like `316` is a valid stop ID but could also be a route); direction pills appear if a matching route is found, ETA cards appear if a matching stop is found. Letter-containing input (e.g. `X4`) is route-only. Stop list responses are cached for 5 minutes to avoid redundant API calls when toggling directions.
 
 - **Line missing when not running (e.g. X4)** — picking a stop from a route's stop list showed every line at the stop, and a line with no predictions simply wasn't there. Picking a stop now narrows the card to that line (`stop.route`), which always shows a row for it, reading "No service right now" when the CTA returns *No service scheduled*.
-- **Route 192 ETAs missing** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab also uses `top=50` (it used `top=10`, which could drop infrequent lines from the all-lines card).
+- **Route 192 southbound always empty** — the example config used stop `2376` (State & Roosevelt), which CTA's GTFS lists for routes 29 and 62 only. Southbound 192 stops at `316` (Roosevelt & State, SE corner). The batch fetch also dropped CTA's per-stop errors whenever any other line had predictions, so the row showed `—` instead of saying why. Fixed: the example uses `316`, and a row now shows CTA's error for its stop + route unless it means "nothing running". Note that 192 runs weekdays only (southbound 6:00–9:00 am from Clinton & Madison, northbound 3:45–7:30 pm from 59th & Drexel), and Bus Tracker only predicts a 192 once its trip has started, so at `15164` (the second northbound stop) ETAs appear only a few minutes ahead.
+- **Route 192 ETAs missing at shared stops** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab also uses `top=50` (it used `top=10`, which could drop infrequent lines from the all-lines card).
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.
 - **Passio vehicle positions debug showing `null`** — `fetchPassioVehicles` was swallowing errors with `.catch(() => null)`. Fixed: error is captured and surfaced in the debug block with the response size, content type, and decode message.
 

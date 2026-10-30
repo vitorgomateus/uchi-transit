@@ -2,7 +2,7 @@
 
 Route 192 is a peak-hours-only express route connecting downtown Chicago to the UChicago campus and medical center. Verify the current schedule at [transitchicago.com](https://www.transitchicago.com) before relying on it.
 
-**Frequency:** Approximately 4 southbound trips in the morning and 4 northbound trips in the late afternoon/evening. Service may not run on weekends or holidays.
+**Frequency:** Weekdays only. 9 southbound trips leaving Clinton & Madison 6:00–9:00 am and 10 northbound trips leaving 59th & Drexel 3:45–7:30 pm (CTA GTFS, fall 2026). No weekend or holiday service.
 
 > **Note:** Stop IDs are sourced from CTA's public GTFS feed.
 
@@ -35,4 +35,4 @@ Route 192 is a peak-hours-only express route connecting downtown Chicago to the 
 
 ---
 
-**Roosevelt stop note:** Stop `2376` ("State & Roosevelt") is also at the Roosevelt intersection and is the stop ID confirmed working in the CTA Bus Tracker API for route 192 southbound — it may be a slightly different physical stop than GTFS stop `316` ("Roosevelt & State"). If `316` shows no arrivals, try `2376`.
+**Roosevelt stop note:** Southbound 192 stops at `316` ("Roosevelt & State", southeast corner). Stop `2376` ("State & Roosevelt", northwest corner) is across the intersection and is served only by routes 29 and 62, so a 192 feed on `2376` never shows arrivals.

@@ -203,6 +203,12 @@
     }
     details.debug-block > summary::-webkit-details-marker { display: none; }
     details.debug-block > summary:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; border-radius: 2px; }
+    .debug-copy {
+      background: #2c2c2e; border: none; border-radius: 999px; color: #fff; cursor: pointer;
+      font-size: 13px; padding: 6px 12px; margin: 2px 0 6px;
+    }
+    .debug-copy:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+    .debug-copy:active { opacity: 0.7; }
     details.debug-block pre {
       background: #0d0d0d; border: 0.5px solid #3a3a3c; border-radius: 8px;
       padding: 10px 12px; font-family: 'Menlo', 'Monaco', monospace; font-size: 12px;
@@ -596,7 +602,7 @@ function renderContent() {
   const dbk = document.createElement('details');
   dbk.className = 'debug-block';
   dbk.id = 'debug-block';
-  dbk.innerHTML = '<summary>Debug</summary><div id="debug-sections"><p style="font-size:12px;color:#8e8e93;padding:4px 0">(waiting for refresh)</p></div>';
+  dbk.innerHTML = '<summary>Debug</summary><button type="button" class="debug-copy" onclick="copyDebug(this)">Copy debug info</button><div id="debug-sections"><p style="font-size:12px;color:#8e8e93;padding:4px 0">(waiting for refresh)</p></div>';
   el.appendChild(dbk);
 }
 
@@ -645,7 +651,7 @@ function setRowErr(i, msg) {
   if (!el) return;
   el.dataset.resolved = '1';
   el.dataset.hasService = '1'; // error = don't collapse
-  el.innerHTML = `<span class="card-err"><span class="visually-hidden">Error: </span>${msg}</span>`;
+  el.innerHTML = `<span class="card-err"><span class="visually-hidden">Error: </span>${esc(msg)}</span>`;
   maybeCollapseGroup(el);
 }
 
@@ -828,6 +834,46 @@ function appendDebug(label, data) {
   sec.appendChild(d);
 }
 
+// Plain-text snapshot for pasting into a bug report: what the screen shows, the tab's
+// config (API keys live at the top level, so they're left out) and every debug section
+async function copyDebug(btn) {
+  const tab   = cfg.tabs[activeTab];
+  const shown = [...document.querySelectorAll('#content .stop-card')].flatMap(card =>
+    [...card.querySelectorAll('.route-row')].map(row => {
+      const lbl = [...row.querySelectorAll('.route-lbl, .dir-lbl')].map(e => e.textContent.trim()).join(' ');
+      const arr = row.querySelector('.arrivals');
+      const chips = [...arr.querySelectorAll('.chip')].map(c => c.textContent.trim()).join(', ');
+      const val   = arr.querySelector('.card-err')?.textContent.trim()
+        ?? (chips || (arr.dataset.resolved ? '—' : 'loading'));
+      return `${card.dataset.gid} | ${lbl}: ${val}`;
+    }));
+  const sections = [...document.querySelectorAll('#debug-sections > details')].map(d =>
+    `== ${d.querySelector('summary').textContent}\n${d.querySelector('pre').textContent}`);
+  const text = [
+    `uchi-transit debug — ${new Date().toString()}`,
+    `Tab: ${tab.label}`,
+    `UA: ${navigator.userAgent}`,
+    '', '== Shown', ...shown,
+    '', '== Tab config', JSON.stringify(tab, null, 2),
+    '', ...sections,
+  ].join('\n');
+
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    // Clipboard API needs a secure context; fall back to a selected textarea
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    ta.remove();
+  }
+  btn.textContent = 'Copied';
+  announce('Debug info copied');
+  setTimeout(() => { btn.textContent = 'Copy debug info'; }, 2000);
+}
+
 function buildPassioDebug(feed, tab) {
   if (!feed) return null;
   const now      = Math.floor(Date.now() / 1000);
@@ -962,6 +1008,9 @@ const ctaProxy   = () => (cfg?.cta_proxy_url ?? 'https://api.allorigins.win/raw'
 // API messages meaning "no vehicles right now" — collapse the card, not a red error
 const CTA_NO_SVC = new Set(['No service scheduled', 'No arrival times', 'No actual times']);
 
+// Returns {preds, errors}. errors carry stpid/rt when they concern one stop or route
+// (e.g. a route that doesn't serve the stop); only an error naming neither (bad key,
+// rate limit) fails the whole batch.
 async function fetchCTABatch(stopIds, routes) {
   if (!cfg.cta_api_key || cfg.cta_api_key === 'YOUR_KEY_HERE') {
     throw new Error('No CTA API key — add one to your config');
@@ -974,17 +1023,23 @@ async function fetchCTABatch(stopIds, routes) {
   const res = await fetch(ctaProxy() + encodeURIComponent(`${CTA_BASE}?${params}`));
   if (!res.ok) throw new Error('CTA proxy HTTP ' + res.status);
 
-  const data  = await res.json();
-  const btr   = data?.['bustime-response'];
-  const preds = btr?.prd || [];
-  const errs  = btr?.error;
-  if (!preds.length && errs?.length) {
-    const msg = errs[0]?.msg || 'CTA error';
-    if (CTA_NO_SVC.has(msg)) return [];
-    throw new Error(msg);
-  }
+  const data   = await res.json();
+  const btr    = data?.['bustime-response'];
+  const preds  = btr?.prd || [];
+  const errors = btr?.error || [];
+  const global = errors.find(e => !e.stpid && !e.rt && !CTA_NO_SVC.has(e.msg));
+  if (!preds.length && global) throw new Error(global.msg || 'CTA error');
 
-  return preds;
+  return { preds, errors };
+}
+
+// The CTA error for one stop + route, if it means something other than "nothing running"
+function ctaRowError(errors, stopId, route) {
+  const e = errors.find(e =>
+    (!e.stpid || String(e.stpid) === String(stopId)) &&
+    (!e.rt    || String(e.rt)    === String(route)) &&
+    (e.stpid || e.rt));
+  return e && !CTA_NO_SVC.has(e.msg) ? e.msg : null;
 }
 
 // Returns [] when the stop exists but nothing is running (e.g. X4 outside rush hour)
@@ -1153,13 +1208,14 @@ async function doRefresh(manual = false) {
   // One CTA request for all CTA feeds in the tab
   const ctaItems      = allFeeds.filter(f => f.feed.source === 'cta');
   const ctaStopIds    = [...new Set(ctaItems.map(i => i.feed.stop_id))];
-  const ctaRoutes     = [...new Set(ctaItems.map(i => i.feed.route))];
+  const ctaRoutes     = [...new Set(ctaItems.map(i => String(i.feed.route)))];
   const passioItems   = allFeeds.filter(f => f.feed.source === 'passio');
   const passioRoutes  = [...new Set(passioItems.map(i => i.feed.route))];
   const passioStopIds = [...new Set(passioItems.flatMap(i => [i.feed.stop_id, i.feed.loop_last_stop].filter(Boolean)))];
   const metraItems    = allFeeds.filter(f => f.feed.source === 'metra');
   const metraStopIds  = [...new Set(metraItems.flatMap(i => [i.feed.stop_id, i.feed.destination_stop_id].filter(Boolean)))];
   let ctaAllPreds  = [];
+  let ctaErrors    = [];
   let ctaFetchErr  = null;
 
   const promises = [];
@@ -1181,10 +1237,15 @@ async function doRefresh(manual = false) {
   }
 
   if (ctaItems.length) {
+    const ctaLabel = `CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`;
     promises.push(
       fetchCTABatch(ctaStopIds, ctaRoutes)
-        .then(preds => { ctaAllPreds = preds; appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, preds); })
-        .catch(e    => { ctaFetchErr = e;     appendDebug(`CTA (${ctaRoutes.join(', ')}) — stops ${ctaStopIds.join(', ')}`, e); })
+        .then(({ preds, errors }) => {
+          ctaAllPreds = preds; ctaErrors = errors;
+          appendDebug(`${ctaLabel} — ${preds.length}${errors.length ? `, ${errors.length} error${errors.length === 1 ? '' : 's'}` : ''}`,
+            { fetched_at: new Date().toISOString(), errors, predictions: preds });
+        })
+        .catch(e => { ctaFetchErr = e; appendDebug(ctaLabel, e); })
     );
   }
 
@@ -1215,8 +1276,10 @@ async function doRefresh(manual = false) {
                                          : arrivals.map(a => ({ m: a.m, approx: null, loop: a.loop })));
       } else if (feed.source === 'cta') {
         if (ctaFetchErr) throw ctaFetchErr;
+        const rowErr = ctaRowError(ctaErrors, feed.stop_id, feed.route);
+        if (rowErr) throw new Error(`Stop ${feed.stop_id}, route ${feed.route}: ${rowErr}`);
         const mins = ctaAllPreds
-          .filter(p => String(p.stpid) === String(feed.stop_id) && p.rt === feed.route)
+          .filter(p => String(p.stpid) === String(feed.stop_id) && String(p.rt) === String(feed.route))
           .map(p => p.prdctdn === 'DUE' ? 0 : parseInt(p.prdctdn, 10))
           .filter(m => !isNaN(m))
           .slice(0, 3);
