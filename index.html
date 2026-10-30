@@ -60,6 +60,14 @@
     }
     .primary-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
     .primary-btn:active { opacity: 0.8; }
+    #cfg-actions { display: flex; gap: 10px; width: 100%; max-width: 480px; }
+    #cfg-actions > button { flex: 1; }
+    .secondary-btn {
+      background: #2c2c2e; color: #fff; border: none; border-radius: 999px;
+      padding: 14px 0; font-size: 17px; font-weight: 600; cursor: pointer;
+    }
+    .secondary-btn:focus-visible { outline: 2px solid #0a84ff; outline-offset: 2px; }
+    .secondary-btn:active { opacity: 0.8; }
 
     /* ── App ─────────────────────────────────────────────── */
     #app { display: none; flex-direction: column; min-height: 100dvh; }
@@ -321,7 +329,10 @@
   <textarea id="cfg-ta" spellcheck="false"
     placeholder='{ "passio_system_id": 1068, "cta_api_key": "...", "tabs": [...] }'></textarea>
   <div id="cfg-err" role="alert"></div>
-  <button class="primary-btn" onclick="applyConfig()">Load config</button>
+  <div id="cfg-actions">
+    <button id="cfg-cancel" class="secondary-btn" onclick="closeCfgScreen()" hidden>Cancel</button>
+    <button class="primary-btn" onclick="applyConfig()">Load config</button>
+  </div>
 
   <section id="legend" aria-labelledby="legend-h">
     <h2 id="legend-h">Reading arrival times</h2>
@@ -483,7 +494,22 @@ function showCfgScreen() {
   document.getElementById('cfg').style.display  = 'flex';
   const saved = localStorage.getItem('transit_cfg');
   if (saved) document.getElementById('cfg-ta').value = saved;
+  document.getElementById('cfg-err').style.display = 'none';
+  document.getElementById('cfg-cancel').hidden = !cfg; // first run: nothing to go back to
 }
+
+// Leaves the saved config untouched; edits in the textarea are dropped next time it opens
+function closeCfgScreen() {
+  if (!cfg) return;
+  document.getElementById('cfg').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('cfg-link').focus();
+  doRefresh();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.getElementById('cfg').style.display !== 'none') closeCfgScreen();
+});
 
 function startApp() {
   document.getElementById('cfg').style.display = 'none';
