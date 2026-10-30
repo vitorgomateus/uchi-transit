@@ -32,6 +32,7 @@ I need to consult UChicago shuttles and CTAs to decide which to use for which I 
 - Must have or be in dark mode for outdoor and night usage. Optimized for OLED: page and card backgrounds are pure black (`#000`); cards are separated by a border rather than a fill.
 - Must be focused and simple.
 - Interactive elements (buttons, inputs, pills) use pill corners; cards and ETA chips keep rounded-rectangle corners so information doesn't look tappable.
+- ETA chip colors: white = live minutes, green = within 5 min, yellow = due, blue = shuttle loop estimate, purple dashed = timetable time. The config screen has a legend explaining them; keep it in sync when adding a chip style.
 
 ## Stop IDs and route codes
 
@@ -67,6 +68,16 @@ The `stops/` folder has full stop tables (sourced from public GTFS feeds) for ea
 - JSONP is NOT supported by the CTA API (tested)
 - Official developer guide (PDF): [cta_Bus_Tracker_API_Developer_Guide_and_Documentation_20160929.pdf](https://www.transitchicago.com/assets/1/6/cta_Bus_Tracker_API_Developer_Guide_and_Documentation_20160929.pdf)
 - **Unlike Passio's GTFS-RT feed, the CTA API is stop-centric:** `getpredictions` answers "what are the next arrivals at this stop?" directly, regardless of where in a route the vehicle currently is. Passio's GTFS-RT is trip-centric: it returns the remaining future stops for currently-running trips, so a stop that is early in a loop route may show no ETAs if all active vehicles have already passed it.
+
+### CTA timetable — `schedules.json`
+- Bus Tracker only predicts a bus once its trip has started, so a peak-only route like 192 shows nothing until a few minutes before a bus arrives. For routes listed in `schedules.json`, rows fill their remaining slots with today's timetable. A scheduled time is shown as a clock time in a purple, dash-outlined chip (e.g. `4:11 PM`; `#bf5af2` on its 15% tint is 5.2:1), and drops out once a live prediction covers that trip (matched by trip ID, or within 3 min).
+- Built from CTA's static GTFS ([google_transit.zip](https://www.transitchicago.com/downloads/sch_data/google_transit.zip), ~70 MB, too big to fetch in the browser) by `tools/build-schedules.py`. Each feed only covers a few months, so rebuild it when the Debug block's *Schedule* section shows a `warning`:
+
+  ```bash
+  python tools/build-schedules.py 192
+  ```
+
+  Pass more routes to include them (e.g. `192 X4`). Holidays come from `calendar_dates.txt`. If a feed has a `direction`, only trips in that direction are shown.
 
 ## Config JSON format
 
@@ -218,6 +229,8 @@ Tab types:
 - **Passio vehiclePositions endpoint returns undecodable binary** — the endpoint responds with 1165 bytes of binary with no `Content-Type`, which fails GTFS-RT protobuf decoding. Root cause unknown; may be a different binary format or a Passio server misconfiguration. The bracketed position-based ETA (`[N]`) feature is wired up but non-functional until this is resolved.
 - **No-service dash contrast** — the `—` shown for a route with no service (`.no-arr`, `#3a3a3c` on `#000`) is 1.85:1. Screen readers get "No service" from visually-hidden text, but the visible glyph is below the WCAG 1.4.3 text threshold.
 
+- **Timetable trip matching unconfirmed** — the app assumes Bus Tracker's `tatripid` equals GTFS `schd_trip_id` and falls back to "within 3 min" when it doesn't. Check the CTA and Schedule debug sections the next time a 192 is live.
+
 ### Resolved
 
 - **Accessibility pass (WCAG 2.0 AA)**:
@@ -231,6 +244,7 @@ Tab types:
 - **Route-code search on the CTA Stop tab** — the search input now accepts a route code in addition to a stop ID. For pure-digit input both `getdirections` and `getpredictions` fire in parallel (a number like `316` is a valid stop ID but could also be a route); direction pills appear if a matching route is found, ETA cards appear if a matching stop is found. Letter-containing input (e.g. `X4`) is route-only. Stop list responses are cached for 5 minutes to avoid redundant API calls when toggling directions.
 
 - **Line missing when not running (e.g. X4)** — picking a stop from a route's stop list showed every line at the stop, and a line with no predictions simply wasn't there. Picking a stop now narrows the card to that line (`stop.route`), which always shows a row for it, reading "No service right now" when the CTA returns *No service scheduled*.
+- **Route 192 blank until the bus starts its trip** — Bus Tracker has no schedule endpoint and only predicts running trips. Fixed: today's remaining 192 times come from `schedules.json` (see *CTA timetable*).
 - **Route 192 southbound always empty** — the example config used stop `2376` (State & Roosevelt), which CTA's GTFS lists for routes 29 and 62 only. Southbound 192 stops at `316` (Roosevelt & State, SE corner). The batch fetch also dropped CTA's per-stop errors whenever any other line had predictions, so the row showed `—` instead of saying why. Fixed: the example uses `316`, and a row now shows CTA's error for its stop + route unless it means "nothing running". Note that 192 runs weekdays only (southbound 6:00–9:00 am from Clinton & Madison, northbound 3:45–7:30 pm from 59th & Drexel), and Bus Tracker only predicts a 192 once its trip has started, so at `15164` (the second northbound stop) ETAs appear only a few minutes ahead.
 - **Route 192 ETAs missing at shared stops** — the CTA Bus Tracker API caps results at 3 predictions by default when `top` is not set. At stops shared with more-frequent routes (e.g. route 4), those 3 slots fill with the frequent route and 192 is silently omitted from the response. Fixed: batch requests use `top=50`; the CTA Stop tab also uses `top=50` (it used `top=10`, which could drop infrequent lines from the all-lines card).
 - **`stop_favorites` silently ignored** — `syncStopFavorites` was reading `tab.spot_favorites` after the localStorage key rename, so pre-populated favorites in the `cta-stop` tab config were never loaded. Fixed: reads `stop_favorites`, falls back to `spot_favorites` for old configs.

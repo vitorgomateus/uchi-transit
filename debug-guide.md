@@ -151,3 +151,32 @@ The CTA Bus Tracker response for every CTA feed in the tab, fetched in one reque
 | `rtdir` | Direction of travel |
 
 **What to check:** If `predictions` has nothing for your stop + route, look in `errors` for an entry with that `stpid`/`rt`. *No service scheduled* collapses the row; any other message is shown on the row. If `dly` is `true` on everything, the route is running late. Cross-check `dstp` against `prdctdn` — a bus 5,000 ft away predicting arrival in 1 min is probably a GPS glitch.
+
+---
+
+## Schedule (…) — stops …
+
+Timetable times from `schedules.json` for CTA feeds whose route is in that file (built by `tools/build-schedules.py`). Shown only for those routes.
+
+```json
+{
+  "generated": "2026-10-30",
+  "valid_until": "20261130",
+  "rows": [
+    {
+      "route": "192",
+      "stop_id": "15164",
+      "direction": "Northbound",
+      "upcoming": ["15:46 (43 min, trip 38963020)", "16:11 (68 min, trip 8343020)"]
+    }
+  ]
+}
+```
+
+| Field | Meaning |
+|---|---|
+| `generated` | When the file was built |
+| `valid_until` | Last date any service in the file covers. After it, a `warning` appears and no times show: rebuild the file |
+| `upcoming` | Next five timetable departures today: time, minutes away, GTFS trip ID. This is before any are dropped for a live bus |
+
+**What to check:** a timetable chip should disappear once its bus shows up live. Compare the trip IDs here with `tatripid` in the CTA section. If they match, the app pairs them by ID; if not, it falls back to dropping timetable times within 3 min of a live bus.
